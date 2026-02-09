@@ -1,7 +1,7 @@
 const express = require('express');
 const VoiceResponse = require('twilio').twiml.VoiceResponse;
 const router = express.Router();
-const { askGemini } = require('../services/gemini');
+const { askHuggingFace } = require('../services/huggingface');
 const { generateAudio } = require('../services/tts');
 
 // In-memory session store (Same as before)
@@ -11,12 +11,12 @@ const PERSONAS = {
     '1': {
         name: 'Neelum',
         voiceId: process.env.VOICE_ID_NEELAM || '21m00Tcm4TlvDq8ikWAM',
-        instruction: "You are Neelum, an energetic, warm, proactive Indian girl. Speak natural Hinglish. Caring friend, great listener. SHORT, conversational responses."
+        instruction: "You are Neelam. Be empathetic, human-like, and conversational. Keep responses short (1–2 sentences max). Acknowledge emotions if present. Avoid sounding robotic or technical."
     },
     '2': {
         name: 'Neel',
         voiceId: process.env.VOICE_ID_NEEL || 'ErXwobaYiN019PkySvjV',
-        instruction: "You are Neel, a calm, supportive Indian guy. Speak natural Hinglish. Reliable friend. SHORT, conversational responses."
+        instruction: "You are Neel. Be empathetic, human-like, and conversational. Keep responses short (1–2 sentences max). Acknowledge emotions if present. Avoid sounding robotic or technical."
     }
 };
 
@@ -99,17 +99,10 @@ router.post('/process-speech', async (req, res) => {
     }
 
     try {
-        // A. Gemini Reply (Manual Prompt Construction)
-        let prompt = `SYSTEM INSTRUCTION: ${session.persona.instruction}\n\nCONVERSATION HISTORY:\n`;
-        session.history.forEach(msg => {
-            const role = msg.role === 'user' ? 'User' : 'AI';
-            prompt += `${role}: ${msg.content}\n`;
-        });
-        prompt += `\nUSER SAID: "${userSpeech}"\n\nGenerate a natural, short response (max 2 sentences). Plain text only. NO MARKDOWN.`;
-
-        console.time("Gemini");
-        const aiText = await askGemini(prompt);
-        console.timeEnd("Gemini");
+        // A. Hugging Face Reply
+        console.time("HuggingFace");
+        const aiText = await askHuggingFace(userSpeech, session.persona.instruction);
+        console.timeEnd("HuggingFace");
 
         // B. Update History
         session.history.push({ role: 'user', content: userSpeech });
