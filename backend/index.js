@@ -3,10 +3,8 @@ const express = require('express');
 const { WebSocketServer } = require('ws');
 const http = require('http');
 const URL = require('url');
-const { GoogleGenerativeAI } = require('@google/generative-ai');
 const VoiceResponse = require('twilio').twiml.VoiceResponse;
 const cors = require('cors');
-const speech = require('@google-cloud/speech');
 const GeminiLiveStream = require('./gemini-live');
 
 const app = express();
@@ -18,7 +16,6 @@ const server = http.createServer(app);
 const wss = new WebSocketServer({ noServer: true });
 
 // Store active sessions in memory
-const sessions = {};
 const sessions = {};
 
 const PERSONAS = {
