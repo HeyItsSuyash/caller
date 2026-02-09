@@ -100,8 +100,8 @@ class GeminiLiveStream {
             this.handleMessage(data);
         });
 
-        this.ws.on('close', () => {
-            console.log('[Gemini Live] Disconnected');
+        this.ws.on('close', (code, reason) => {
+            console.log(`[Gemini Live] Disconnected: Code=${code} Reason=${reason?.toString()}`);
             this.isConnected = false;
         });
 

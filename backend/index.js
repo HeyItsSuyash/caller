@@ -75,9 +75,9 @@ app.post('/select-persona', (req, res) => {
     const connect = twiml.connect();
 
     // Use PUBLIC_BASE_URL if available for more reliable WebSocket resolution
-    const streamUrl = process.env.PUBLIC_BASE_URL
-        ? `${process.env.PUBLIC_BASE_URL.replace('https://', 'wss://')}/media?phone=${encodeURIComponent(phone)}`
-        : `wss://${req.headers.host}/media?phone=${encodeURIComponent(phone)}`;
+    // Use PUBLIC_BASE_URL if available for more reliable WebSocket resolution
+    const baseUrl = (process.env.PUBLIC_BASE_URL || `https://${req.headers.host}`).replace(/\/$/, '');
+    const streamUrl = `${baseUrl.replace('https://', 'wss://')}/media?phone=${encodeURIComponent(phone)}`;
 
     connect.stream({
         url: streamUrl,
