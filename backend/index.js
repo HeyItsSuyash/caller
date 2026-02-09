@@ -24,6 +24,9 @@ const model = genAI.getGenerativeModel({ model: "text-bison-001" });
 const speechClient = new speech.SpeechClient();
 const ttsClient = new textToSpeech.TextToSpeechClient();
 
+// Store active sessions in memory
+const sessions = {};
+
 const PERSONAS = {
     '1': {
         name: 'Neelum',
@@ -209,7 +212,7 @@ wss.on('connection', (ws, req) => {
         console.log('[Interruption] Triggering flush and contextual response...');
         session.aiSpeaking = false;
         session.interrupted = true;
-        aiSpeechQueue = []; // Flush queue
+        // flushed by setting session.interrupted = true
 
         // Send 'clear' to Twilio to stop playback on the phone instantly
         ws.send(JSON.stringify({
