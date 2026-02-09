@@ -19,7 +19,7 @@ const server = http.createServer(app);
 
 // Google Gemini Setup
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
 
 // Store active sessions in memory
 const sessions = {};
@@ -54,9 +54,9 @@ app.post('/voice', (req, res) => {
         timeout: 10
     });
 
-    gather.say({ language: 'en-IN' }, "Namaste! Choose your companion. Press 1 for Neelum, Press 2 for Neel.");
+    gather.say({ voice: 'Polly.Aditi', language: 'en-IN' }, "Namaste! Choose your companion. Press 1 for Neelum, Press 2 for Neel.");
 
-    twiml.say("We did not receive input. Defaulting to Neelum.");
+    twiml.say({ voice: 'Polly.Aditi', language: 'en-IN' }, "We did not receive input. Defaulting to Neelum.");
     twiml.redirect(`/select-persona?phone=${encodeURIComponent(phone)}&Digits=1`);
 
     res.type('text/xml').send(twiml.toString());
@@ -77,7 +77,7 @@ app.post('/select-persona', (req, res) => {
     };
 
     const twiml = new VoiceResponse();
-    twiml.say({ language: 'en-IN' }, `Great! You are talking to ${sessions[phone].persona.name}. Say hello!`);
+    twiml.say({ voice: 'Polly.Aditi', language: 'en-IN' }, `Great! You are talking to ${sessions[phone].persona.name}. Please say hello and wait for me to reply.`);
 
     // Redirect to Transcribe loop
     twiml.redirect(`/transcribe?phone=${encodeURIComponent(phone)}`);
