@@ -5,8 +5,8 @@ if (!process.env.GEMINI_API_KEY) {
 }
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-// Use standard "gemini-1.5-flash" model (Stable) with forced v1 API version
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" }, { apiVersion: 'v1' });
+// Fallback to "gemini-pro" (Universal availability)
+const model = genAI.getGenerativeModel({ model: "gemini-pro" }, { apiVersion: 'v1' });
 
 /**
  * Generates a response from Gemini based on the user's input and conversation history.
