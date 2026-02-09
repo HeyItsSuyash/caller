@@ -168,5 +168,27 @@ app.post('/process-speech', async (req, res) => {
 });
 
 
+// 5. API Call Initiation (Restored)
+app.post('/api/call', async (req, res) => {
+    const { phone: rawPhone } = req.body;
+    if (!rawPhone) return res.status(400).json({ error: 'Phone required' });
+
+    const phone = normalizePhone(rawPhone);
+
+    const client = require('twilio')(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+    try {
+        console.log(`[API] Initiating call to ${phone}`);
+        await client.calls.create({
+            url: `${process.env.PUBLIC_BASE_URL}/voice`, // Start at /voice
+            to: rawPhone,
+            from: process.env.TWILIO_PHONE_NUMBER,
+        });
+        res.json({ message: 'Success: Call initiated' });
+    } catch (e) {
+        console.error(`[API Error] Failed to initiate call: ${e.message}`);
+        res.status(500).json({ error: e.message });
+    }
+});
+
 const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => console.log(`Server listening on port ${PORT}`));
