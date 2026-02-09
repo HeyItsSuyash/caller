@@ -4,7 +4,7 @@
   "description": "Minimal AI phone caller prototype",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js",
+    "start": "node server.js",
     "build": "echo 'No build step required for backend'"
   },
   "dependencies": {
