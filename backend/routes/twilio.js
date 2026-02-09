@@ -1,7 +1,7 @@
 const express = require('express');
 const VoiceResponse = require('twilio').twiml.VoiceResponse;
 const router = express.Router();
-const { generateReply } = require('../services/gemini');
+const { askGemini } = require('../services/gemini');
 const { generateAudio } = require('../services/tts');
 
 // In-memory session store (Same as before)
@@ -99,8 +99,17 @@ router.post('/process-speech', async (req, res) => {
     }
 
     try {
-        // A. Gemini Reply
-        const aiText = await generateReply(userSpeech, session.history, session.persona.instruction);
+        // A. Gemini Reply (Manual Prompt Construction)
+        let prompt = `SYSTEM INSTRUCTION: ${session.persona.instruction}\n\nCONVERSATION HISTORY:\n`;
+        session.history.forEach(msg => {
+            const role = msg.role === 'user' ? 'User' : 'AI';
+            prompt += `${role}: ${msg.content}\n`;
+        });
+        prompt += `\nUSER SAID: "${userSpeech}"\n\nGenerate a natural, short response (max 2 sentences). Plain text only. NO MARKDOWN.`;
+
+        console.time("Gemini");
+        const aiText = await askGemini(prompt);
+        console.timeEnd("Gemini");
 
         // B. Update History
         session.history.push({ role: 'user', content: userSpeech });
