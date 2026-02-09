@@ -5,8 +5,8 @@ if (!process.env.GEMINI_API_KEY) {
 }
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-// Use the "gemini-1.5-flash-latest" model as requested
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash-latest" });
+// Use standard "gemini-1.5-flash" model (Stable)
+const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 /**
  * Generates a response from Gemini based on the user's input and conversation history.
