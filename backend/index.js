@@ -136,9 +136,15 @@ wss.on('connection', (ws, req) => {
     console.log(`[Stream] WebSocket connected for ${phone}`);
 
     let streamSid = '';
-    let session = sessions[phone] || { history: [], emotion: 'neutral' };
-    if (!sessions[phone]) {
+    // Ensure we retrieve the session created in /select-persona
+    let session = sessions[phone];
+
+    if (!session) {
         console.warn(`[Warning] No pre-existing session found for ${phone}. Creating ad-hoc session.`);
+        session = { history: [], emotion: 'neutral', phone };
+        sessions[phone] = session;
+    } else {
+        console.log(`[Stream] Restored session for ${phone}. Persona: ${session.persona ? session.persona.name : 'Unknown'}`);
     }
     let recognizeStream = null;
 
@@ -287,25 +293,40 @@ async function streamSpeech(ws, streamSid, text, session) {
     session.aiSpeaking = false;
 }
 
+// Helper: Clean JSON response
+function cleanJSON(text) {
+    const match = text.match(/\{[\s\S]*\}/);
+    return match ? match[0] : null;
+}
+
 async function getGeminiResponse(input, session) {
+    const persona = session.persona || PERSONAS['1'];
+    console.log(`[Gemini] Generating response for input: "${input}" with persona: ${persona.name}`);
+
     const prompt = `
-SYSTEM: ${session.persona ? session.persona.instruction : PERSONAS['1'].instruction}
+    You are an AI voice assistant engaged in a phone call.
+    
+    SYSTEM INSTRUCTION:
+    ${persona.instruction}
 
-Context Memory:
-${session.history.map(h => `${h.role === 'user' ? 'User' : (session.persona ? session.persona.name : 'AI')}: ${h.content}`).join('\n')}
+    CURRENT EMOTION STATE: ${session.emotion || 'neutral'}
 
-Rules:
-- Always respond naturally and PROACTIVELY to interruptions
-- Reply in the same language as the user (Hindi, English, or Hinglish)
-- Keep replies under 2 sentences
-- If user sounds sad or stressed, acknowledge gently with high empathy
-- Sound human and energetic, use perfect grammar for your gender
-- Use variations of 'Hmmmm...' and 'Achha' to show you are listening
-- Detect user emotion: [sad, stressed, neutral, happy]
-- Format JSON ONLY: {"reply": "response content", "emotion": "emotion"}
+    CONVERSATION HISTORY:
+    ${session.history.map(h => `${h.role === 'user' ? 'User' : 'You'}: ${h.content}`).join('\n')}
 
-User just said: "${input}"
-`;
+    USER JUST SAID: "${input}"
+
+    YOUR TASK:
+    1. Analyze the user's input and the conversation context.
+    2. Determine the user's emotion (one of: neutral, happy, sad, angry, stressed, excited).
+    3. Generate a natural, human-like response (keep it under 2 sentences, conversational).
+    4. Return ONLY a valid JSON object in this format:
+       {
+         "reply": "Your response text here",
+         "emotion": "detected_emotion"
+       }
+    5. Do NOT include markdown formatting (like \`\`\`json). Just the raw JSON string.
+    `;
 
     try {
         console.log(`[Gemini] Sending prompt to ${model.model}...`);
@@ -313,15 +334,24 @@ User just said: "${input}"
         const responseText = result.response.text();
         console.log(`[Gemini] Raw Response: ${responseText}`);
 
-        const jsonMatch = responseText.match(/\{.*\}/s);
-        const aiData = jsonMatch ? JSON.parse(jsonMatch[0]) : { reply: "I understand. Please go on.", emotion: "neutral" };
+        let aiData;
+        try {
+            const cleaned = cleanJSON(responseText);
+            if (!cleaned) throw new Error("No JSON found");
+            aiData = JSON.parse(cleaned);
+        } catch (parseError) {
+            console.error(`[Gemini Error] Failed to parse JSON: ${parseError.message} | Response: ${responseText}`);
+            // Fallback
+            aiData = { reply: "Haan, main sun rahi hoon. Boliye?", emotion: "neutral" };
+        }
 
-        console.log(`[AI] Stage: Emotion=${aiData.emotion} | Reply="${aiData.reply}"`);
+        console.log(`[AI] Context Updated: Emotion=${aiData.emotion} | Reply="${aiData.reply}"`);
 
         // Update session state
         session.emotion = aiData.emotion;
         session.history.push({ role: 'user', content: input });
         session.history.push({ role: 'ai', content: aiData.reply });
+
 
         // Proactive Follow-Up: 5 minutes if sad/stressed
         if ((aiData.emotion === "sad" || aiData.emotion === "stressed") && !session.isFollowUp) {
