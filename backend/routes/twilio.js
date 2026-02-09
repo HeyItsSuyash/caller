@@ -99,23 +99,29 @@ router.post('/process-speech', async (req, res) => {
     }
 
     try {
+        console.log(`[Twilio] 🟢 Processing turn for ${phone}. User said: "${userSpeech}"`);
+
         // A. Hugging Face Reply
         console.time("HuggingFace");
+        console.log(`[Twilio] 🧠 Sending to Hugging Face...`);
         const aiText = await askHuggingFace(userSpeech, session.persona.instruction);
         console.timeEnd("HuggingFace");
+        console.log(`[Twilio] 🧠 AI Reply: "${aiText}"`);
 
         // B. Update History
         session.history.push({ role: 'user', content: userSpeech });
         session.history.push({ role: 'ai', content: aiText });
 
         // C. Generate Audio
+        console.log(`[Twilio] 🗣️ Generating audio (Voice: ${session.persona.voiceId})...`);
         const fileName = await generateAudio(aiText, session.persona.voiceId);
+        console.log(`[Twilio] 🎵 Audio generated: ${fileName}`);
 
         // D. Play Audio
         const baseUrl = (process.env.PUBLIC_BASE_URL || `https://${req.headers.host}`).replace(/\/$/, '');
         const audioUrl = `${baseUrl}/audio/${fileName}`;
 
-        console.log(`[Twilio] Playing audio to caller: ${audioUrl}`);
+        console.log(`[Twilio] ▶️ Playing audio to caller: ${audioUrl}`);
 
         const twiml = new VoiceResponse();
         twiml.play(audioUrl);
@@ -124,7 +130,11 @@ router.post('/process-speech', async (req, res) => {
         res.type('text/xml').send(twiml.toString());
 
     } catch (err) {
-        console.error("[Twilio] Error processing turn:", err);
+        console.error("================ [Twilio Processing Error] ================");
+        console.error(`Phone: ${phone}`);
+        console.error(`Error:`, err);
+        console.error("===========================================================");
+
         const twiml = new VoiceResponse();
         twiml.say("Sorry, I had trouble thinking. One moment.");
         twiml.redirect(`/twilio/transcribe?phone=${encodeURIComponent(phone)}`);
