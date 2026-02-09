@@ -35,7 +35,7 @@ async function generateAudio(text, voiceId) {
             url: url,
             data: {
                 text: text,
-                model_id: "eleven_monolingual_v1", // Consistent, low latency
+                model_id: "eleven_turbo_v2_5", // Turbo model for lowest latency
                 voice_settings: {
                     stability: 0.3,
                     similarity_boost: 0.8,

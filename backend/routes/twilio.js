@@ -72,7 +72,7 @@ router.post('/transcribe', (req, res) => {
     twiml.gather({
         input: 'speech',
         action: `/twilio/process-speech?phone=${encodeURIComponent(phone)}`,
-        timeout: 2,
+        timeout: 5, // Wait 5s silence (up from 2s) to be more patient
         speechTimeout: 'auto',
         language: 'en-IN'
     });
