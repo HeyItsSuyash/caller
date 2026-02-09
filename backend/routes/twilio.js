@@ -1,7 +1,7 @@
 const express = require('express');
 const VoiceResponse = require('twilio').twiml.VoiceResponse;
 const router = express.Router();
-const { generateReply } = require('../services/gemini');
+const { generateReply } = require('../services/openai');
 const { generateAudio } = require('../services/tts');
 
 // In-memory session store (Same as before)
