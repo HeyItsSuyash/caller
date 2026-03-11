@@ -47,10 +47,18 @@ app.post('/api/call', async (req, res) => {
     }
 });
 
+const http = require('http');
+const { initializeVoiceStream } = require('./ws/voiceStream');
+
+const server = http.createServer(app);
+
+// Initialize WebSocket server on the same HTTP server port
+initializeVoiceStream(server);
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Server listening on port ${PORT}`);
-            console.log(`Environment config: Gemini Model=gemini-2.5-flash`);
+server.listen(PORT, () => {
+    console.log(`Server & WebSocket listening on port ${PORT}`);
+    console.log(`Environment config: Gemini Model=gemini-2.5-flash`);
     try {
         const pkg = require('@google/generative-ai/package.json');
         console.log(`Gemini SDK Version: ${pkg.version}`);

@@ -42,4 +42,39 @@ async function askGemini(userText, systemInstruction) {
     }
 }
 
-module.exports = { askGemini };
+/**
+ * Streams AI response from Gemini.
+ */
+async function* askGeminiStream(userText, systemInstruction, history = []) {
+    try {
+        if (!GEMINI_API_KEY) throw new Error("Missing GEMINI_API_KEY");
+
+        const model = genAI.getGenerativeModel({
+            model: "gemini-2.5-flash",
+            systemInstruction: systemInstruction,
+            generationConfig: {
+                maxOutputTokens: 80, // Optimized for short voice responses
+            }
+        });
+
+        // Format history for Gemini SDK if needed
+        // Assuming history is [{role: 'user'|'ai', content: '...'}]
+        const chat = model.startChat({
+            history: history.slice(0, -1).map(h => ({
+                role: h.role === 'user' ? 'user' : 'model',
+                parts: [{ text: h.content }],
+            })),
+        });
+
+        const result = await chat.sendMessageStream(userText);
+        for await (const chunk of result.stream) {
+            const chunkText = chunk.text();
+            yield chunkText;
+        }
+    } catch (error) {
+        console.error("[Gemini Stream Error]", error.message);
+        yield "I'm sorry, I'm having trouble thinking right now.";
+    }
+}
+
+module.exports = { askGemini, askGeminiStream };
