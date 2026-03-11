@@ -18,12 +18,12 @@ async function askGemini(userText, systemInstruction) {
     try {
         if (!GEMINI_API_KEY) throw new Error("Missing GEMINI_API_KEY");
 
-        console.log(`[Gemini] Sending request to Gemini 1.5 Flash...`);
+        console.log(`[Gemini] Sending request to Gemini 2.5 Flash...`);
         console.log(`[Gemini] Prompt context: "${systemInstruction}"`);
         console.log(`[Gemini] User input: "${userText}"`);
 
         const model = genAI.getGenerativeModel({
-            model: "gemini-1.5-flash",
+            model: "gemini-2.5-flash",
             systemInstruction: systemInstruction,
         });
 

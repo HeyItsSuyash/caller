@@ -50,7 +50,7 @@ app.post('/api/call', async (req, res) => {
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`Server listening on port ${PORT}`);
-    console.log(`Environment config: Gemini Model=gemini-1.5-flash`);
+            console.log(`Environment config: Gemini Model=gemini-2.5-flash`);
     try {
         const pkg = require('@google/generative-ai/package.json');
         console.log(`Gemini SDK Version: ${pkg.version}`);

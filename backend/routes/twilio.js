@@ -2,7 +2,8 @@ const express = require('express');
 const VoiceResponse = require('twilio').twiml.VoiceResponse;
 const router = express.Router();
 const { askGemini } = require('../services/gemini');
-const { generateAudio } = require('../services/tts');
+const { generateSpeech } = require('../services/sarvam_tts');
+const { transcribeAudioFromUrl } = require('../services/sarvam_stt');
 
 // In-memory session store (Same as before)
 const sessions = {};
@@ -72,12 +73,11 @@ router.post('/transcribe', (req, res) => {
     const phone = normalizePhone(req.query.phone || req.body.From);
     const twiml = new VoiceResponse();
 
-    twiml.gather({
-        input: 'speech',
+    twiml.record({
         action: `/twilio/process-speech?phone=${encodeURIComponent(phone)}`,
-        timeout: 7, // Wait 7s silence (up from 5s) to be more patient
-        speechTimeout: 'auto',
-        language: 'en-IN'
+        method: 'POST',
+        maxLength: 10,
+        playBeep: true
     });
 
     twiml.say({ voice: 'Polly.Aditi', language: 'en-IN' }, "I didn't hear anything.");
@@ -89,10 +89,14 @@ router.post('/transcribe', (req, res) => {
 // 4. Process Speech (Think -> Speak)
 router.post('/process-speech', async (req, res) => {
     const phone = normalizePhone(req.query.phone || req.body.From);
-    const userSpeech = req.body.SpeechResult;
+    const recordingUrl = req.body.RecordingUrl;
 
     console.log(`\n[Twilio Flow] 💬 Caller ${phone} finished speaking.`);
-    console.log(`              " ${userSpeech || '(No text detected)'} "`);
+    if (recordingUrl) {
+        console.log(`              Recording URL: ${recordingUrl}`);
+    } else {
+        console.log(`              (No recording detected)`);
+    }
 
     const session = sessions[phone];
     if (!session) {
@@ -105,6 +109,23 @@ router.post('/process-speech', async (req, res) => {
 
     try {
         console.log(`[Twilio Flow] 🔄 Processing turn for ${session.persona.name}...`);
+
+        let userSpeech = "";
+        if (recordingUrl) {
+            console.log(`[Twilio Flow] 🦻 Transcribing audio with Sarvam STT...`);
+            userSpeech = await transcribeAudioFromUrl(recordingUrl);
+            console.log(`[Twilio Flow] 🗣️ User said: "${userSpeech}"`);
+        } else {
+            console.warn(`[Twilio Flow] ⚠️ No RecordingUrl in request.`);
+            userSpeech = req.body.SpeechResult || "";
+        }
+
+        // If nothing was said, loop back to listen
+        if (!userSpeech || !userSpeech.trim()) {
+            const twiml = new VoiceResponse();
+            twiml.redirect(`/twilio/transcribe?phone=${encodeURIComponent(phone)}`);
+            return res.type('text/xml').send(twiml.toString());
+        }
 
         // A. Gemini Reply
         console.time("Gemini Generation Time");
@@ -121,15 +142,15 @@ router.post('/process-speech', async (req, res) => {
         session.history.push({ role: 'ai', content: aiText });
 
         // C. Generate Audio
-        console.log(`[Twilio] 🗣️ Generating audio (Voice: ${session.persona.voiceId})...`);
-        const fileName = await generateAudio(aiText, session.persona.voiceId);
-        console.log(`[Twilio] 🎵 Audio generated: ${fileName}`);
+        console.log(`[Twilio Flow] 🔊 Generating audio using Sarvam TTS (Persona: ${session.persona.name})...`);
+        const fileName = await generateSpeech(aiText, session.persona.name || 'neelum');
+        console.log(`[Twilio Flow] 🎵 Audio generated: ${fileName}`);
 
         // D. Play Audio
         const baseUrl = (process.env.PUBLIC_BASE_URL || `https://${req.headers.host}`).replace(/\/$/, '');
         const audioUrl = `${baseUrl}/audio/${fileName}`;
 
-        console.log(`[Twilio] ▶️ Playing audio to caller: ${audioUrl}`);
+        console.log(`[Twilio Flow] ▶️ Playing audio to caller: ${audioUrl}`);
 
         const twiml = new VoiceResponse();
         twiml.play(audioUrl);
