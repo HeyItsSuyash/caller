@@ -1,4 +1,4 @@
-const { askGeminiStream } = require('./gemini');
+const { askGroqStream } = require('./groq');
 const SarvamStreamSTT = require('./sarvam_stream_stt');
 const SarvamStreamTTS = require('./sarvam_stream_tts');
 
@@ -76,10 +76,9 @@ class ConversationManager {
             // 1. Update history
             this.session.history.push({ role: 'user', content: prompt });
 
-            // 2. Stream from Gemini and pipe to TTS
-            // Note: We'll implement askGeminiStream to return an async generator/stream
+            // 2. Stream from Groq and pipe to TTS
             let fullAiResponse = "";
-            const responseStream = askGeminiStream(prompt, this.session.persona.instruction, this.session.history);
+            const responseStream = askGroqStream(prompt, this.session.persona.instruction, this.session.history);
             
             // For now, let's collect chunks and stream to TTS as they make sense
             // or just stream the whole thing if Sarvam TTS doesn't support partial text yet.
