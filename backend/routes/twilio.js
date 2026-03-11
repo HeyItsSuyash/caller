@@ -1,7 +1,7 @@
 const express = require('express');
 const VoiceResponse = require('twilio').twiml.VoiceResponse;
 const router = express.Router();
-const { askHuggingFace } = require('../services/huggingface');
+const { askGemini } = require('../services/gemini');
 const { generateAudio } = require('../services/tts');
 
 // In-memory session store (Same as before)
@@ -10,13 +10,13 @@ const sessions = {};
 const PERSONAS = {
     '1': {
         name: 'Neelum',
-        voiceId: process.env.VOICE_ID_NEELAM || '21m00Tcm4TlvDq8ikWAM',
-        instruction: "You are Neelam. Be empathetic, human-like, and conversational. Keep responses short (1–2 sentences max). Acknowledge emotions if present. Avoid sounding robotic or technical."
+        voiceId: process.env.VOICE_ID_NEELAM || '1zUSi8LeHs9M2mV8X6YS',
+        instruction: "You are Neelam. Be empathetic, human-like, and conversational. Keep responses short (1–2 sentences max). Acknowledge emotions if present. Avoid sounding robotic or technical. Reply only with the spoken words you would say to the user, no action descriptions."
     },
     '2': {
         name: 'Neel',
-        voiceId: process.env.VOICE_ID_NEEL || 'ErXwobaYiN019PkySvjV',
-        instruction: "You are Neel. Be empathetic, human-like, and conversational. Keep responses short (1–2 sentences max). Acknowledge emotions if present. Avoid sounding robotic or technical."
+        voiceId: process.env.VOICE_ID_NEEL || 'FmBhnvP58BK0vz65OOj7',
+        instruction: "You are Neel. Be empathetic, human-like, and conversational. Keep responses short (1–2 sentences max). Acknowledge emotions if present. Avoid sounding robotic or technical. Reply only with the spoken words you would say to the user, no action descriptions."
     }
 };
 
@@ -27,7 +27,9 @@ function normalizePhone(phone) {
 // 1. Initial Call -> Select Persona
 router.post('/voice', (req, res) => {
     const phone = normalizePhone(req.body.From);
-    console.log(`[Twilio] Call received from ${phone}`);
+    console.log(`\n================================`);
+    console.log(`[Twilio Flow] 📞 Incoming call received from ${phone}`);
+    console.log(`================================\n`);
 
     const twiml = new VoiceResponse();
     const gather = twiml.gather({
@@ -49,7 +51,7 @@ router.post('/select-persona', (req, res) => {
     const phone = normalizePhone(req.query.phone || req.body.From);
     const digit = req.body.Digits || '1';
 
-    console.log(`[Twilio] Persona ${digit} selected for ${phone}`);
+    console.log(`[Twilio Flow] 👤 Persona ${digit} selected for caller ${phone}`);
 
     sessions[phone] = {
         phone,
@@ -60,6 +62,7 @@ router.post('/select-persona', (req, res) => {
     const twiml = new VoiceResponse();
     twiml.say({ voice: 'Polly.Aditi', language: 'en-IN' }, `Great! You are talking to ${sessions[phone].persona.name}. Please say hello.`);
 
+    console.log(`[Twilio Flow] 🎤 Starting transcription gathering...`);
     twiml.redirect(`/twilio/transcribe?phone=${encodeURIComponent(phone)}`);
     res.type('text/xml').send(twiml.toString());
 });
@@ -72,7 +75,7 @@ router.post('/transcribe', (req, res) => {
     twiml.gather({
         input: 'speech',
         action: `/twilio/process-speech?phone=${encodeURIComponent(phone)}`,
-        timeout: 5, // Wait 5s silence (up from 2s) to be more patient
+        timeout: 7, // Wait 7s silence (up from 5s) to be more patient
         speechTimeout: 'auto',
         language: 'en-IN'
     });
@@ -88,10 +91,12 @@ router.post('/process-speech', async (req, res) => {
     const phone = normalizePhone(req.query.phone || req.body.From);
     const userSpeech = req.body.SpeechResult;
 
-    console.log(`[Twilio] Transcript received from ${phone}: "${userSpeech}"`);
+    console.log(`\n[Twilio Flow] 💬 Caller ${phone} finished speaking.`);
+    console.log(`              " ${userSpeech || '(No text detected)'} "`);
 
     const session = sessions[phone];
     if (!session) {
+        console.warn(`[Twilio Flow] ⚠️ Session expired or missing for caller ${phone}`);
         const twiml = new VoiceResponse();
         twiml.say("Session expired.");
         twiml.hangup();
@@ -99,14 +104,17 @@ router.post('/process-speech', async (req, res) => {
     }
 
     try {
-        console.log(`[Twilio] 🟢 Processing turn for ${phone}. User said: "${userSpeech}"`);
+        console.log(`[Twilio Flow] 🔄 Processing turn for ${session.persona.name}...`);
 
-        // A. Hugging Face Reply
-        console.time("HuggingFace");
-        console.log(`[Twilio] 🧠 Sending to Hugging Face...`);
-        const aiText = await askHuggingFace(userSpeech, session.persona.instruction);
-        console.timeEnd("HuggingFace");
-        console.log(`[Twilio] 🧠 AI Reply: "${aiText}"`);
+        // A. Gemini Reply
+        console.time("Gemini Generation Time");
+        console.log(`[Twilio Flow] 🧠 Dispatching prompt to Gemini...`);
+        let aiText = await askGemini(userSpeech, session.persona.instruction);
+        console.timeEnd("Gemini Generation Time");
+        
+        // Clean up asterisks if present in standard formatting
+        aiText = aiText.replace(/\*/g, '');
+        console.log(`[Twilio Flow] ✨ Gemini Response generated successfully`);
 
         // B. Update History
         session.history.push({ role: 'user', content: userSpeech });

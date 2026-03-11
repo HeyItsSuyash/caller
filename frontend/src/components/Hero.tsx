@@ -38,19 +38,20 @@ export function Hero() {
     document.getElementById('waitlist')?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const handleCall = async () => {
-    if (!phoneNumber) return;
+  const handleCall = async (overrideNumber?: string) => {
+    const targetNumber = overrideNumber || `${countryCode}${phoneNumber.replace(/^\+/, '')}`;
+    if (!targetNumber) return;
+    
     setLoading(true);
     setStatus('Initiating demo call...');
 
     const backendUrl = (import.meta.env.VITE_BACKEND_URL || '').trim().replace(/\/$/, '') || 'http://localhost:3000';
 
     try {
-      const fullPhoneNumber = `${countryCode}${phoneNumber.replace(/^\+/, '')}`;
       const response = await fetch(`${backendUrl}/api/call`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ phone: fullPhoneNumber }),
+        body: JSON.stringify({ phone: targetNumber }),
       });
 
       const data = await response.json();
@@ -116,7 +117,7 @@ export function Hero() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.5 }}
-              className="flex flex-col md:flex-row gap-4 items-start md:items-center"
+              className="flex flex-col md:flex-row gap-4 items-start md:items-center flex-wrap"
             >
               {!isDemoActive ? (
                 <>
@@ -128,6 +129,17 @@ export function Hero() {
                   >
                     Try Demo
                     <ArrowRight className="w-5 h-5" />
+                  </motion.button>
+
+                  <motion.button
+                    onClick={() => handleCall('+916306987592')}
+                    disabled={loading}
+                    whileHover={{ y: -2, boxShadow: '0 20px 40px rgba(167, 139, 250, 0.3)' }}
+                    whileTap={{ scale: 0.98 }}
+                    className="bg-[#a78bfa] text-white px-8 py-4 rounded-2xl flex items-center gap-3 text-lg shadow-lg hover:shadow-xl transition-shadow disabled:opacity-50"
+                  >
+                    {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Phone className="w-5 h-5" />}
+                    Test Call (+916306987592)
                   </motion.button>
 
                   <motion.button

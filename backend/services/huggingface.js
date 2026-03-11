@@ -1,7 +1,7 @@
 const axios = require('axios');
 
 const HF_API_KEY = process.env.HUGGINGFACE_API_KEY;
-const MODEL_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2";
+const MODEL_URL = "https://router.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2";
 
 if (!HF_API_KEY) {
     console.warn("⚠️ Missing HUGGINGFACE_API_KEY environment variable. AI responses will fail.");
