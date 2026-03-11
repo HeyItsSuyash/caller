@@ -1,0 +1,101 @@
+# Caller AI - Full Stack Codebase Context
+
+This document provides a comprehensive overview of the `Caller` codebase, designed to give an LLM full context of the architecture, data flow, and technologies used. 
+
+## 1. Project Overview
+**Caller** is an AI-powered proactive voice companion application. It features a React frontend landing page where users can trigger a demo call to their phone number. The Node.js/Express backend handles the call orchestration using Twilio for telephony, Gemini 2.5 Flash for conversational AI, and ElevenLabs for Text-to-Speech (TTS).
+
+The project is divided into two main directories:
+- `/frontend`: A React (Vite + TypeScript) landing page and demo trigger.
+- `/backend`: A Node.js (Express) server acting as a webhook receiver for Twilio and orchestrating AI services.
+
+---
+
+## 2. Backend Architecture (`/backend`)
+
+The backend is built with Express.js and serves as the bridge between Twilio, the AI model (Gemini), and the user's phone.
+
+### Key Files & Responsibilities:
+
+#### `server.js` (Entry Point)
+- Loads `.env` configurations.
+- Initializes the Express app with CORS and JSON/URL-encoded parsing.
+- Serves static audio files from the `/public/audio` directory.
+- Mounts Twilio webhook routes under `/twilio`.
+- Exposes a `POST /api/call` endpoint. When hit by the frontend, it uses the Twilio Node SDK (`client.calls.create`) to initiate an outbound call, instructing Twilio to fetch TwiML instructions from `/twilio/voice`.
+
+#### `routes/twilio.js` (The Core Call Flow)
+This file handles the sequence of webhooks sent by Twilio during an active phone call. It manages an in-memory `sessions` object to store conversation history per phone number.
+
+**The Webhook Flow:**
+1. **`POST /voice`**: Triggered when a call starts. Uses TwiML `<Gather>` to ask the user to select a persona (Press 1 for Neelum, 2 for Neel).
+2. **`POST /select-persona`**: Saves the selected persona into the session and redirects to transcription.
+3. **`POST /transcribe`**: Uses TwiML `<Gather input="speech">` to listen to the user for up to 7 seconds of silence.
+4. **`POST /process-speech`**: 
+   - Receives the transcribed text (`req.body.SpeechResult`).
+   - Sends the text and persona instructions to the Gemini service.
+   - Pushes the conversation turn into `session.history`.
+   - Sends the Gemini response text to the TTS service.
+   - Responds to Twilio with `<Play>` containing the generated audio URL.
+   - Loops back to `/transcribe`.
+
+#### `services/gemini.js` (LLM Integration)
+- Connects to Google's Generative Language API using the `@google/generative-ai` SDK.
+- Instantiates the `gemini-2.5-flash` model.
+- Appends the persona's `systemInstruction` to guide the AI's behavior.
+- Returns the generated text response.
+
+#### `services/tts.js` (Voice Generation)
+- Uses the ElevenLabs REST API to convert the Gemini text response into an MP3 file.
+- Uses the `eleven_turbo_v2_5` model for low latency.
+- Saves the resulting audio file to `/public/audio/{uuid}.mp3` and returns the filename.
+
+#### Environment Variables (`.env`)
+- `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_PHONE_NUMBER`
+- `GEMINI_API_KEY`
+- `ELEVENLABS_API_KEY`
+- `PUBLIC_BASE_URL`: Must be an ngrok/localtunnel URL during local development (e.g., `https://my-tunnel.loca.lt`) so Twilio can reach the local server.
+- `VOICE_ID_NEELAM`, `VOICE_ID_NEEL` (ElevenLabs voice profiles)
+
+---
+
+## 3. Frontend Architecture (`/frontend`)
+
+The frontend is a static landing page built with React, Vite, TypeScript, and Tailwind CSS. It focuses on marketing the product and providing a "Test Demo" feature.
+
+### Key Files & Responsibilities:
+
+#### `src/App.tsx` & `src/main.tsx`
+- The standard React entry points. `App.tsx` assembles various UI sections (Hero, ProblemSection, SolutionSection, etc.).
+
+#### `src/components/Hero.tsx`
+- The top section of the page containing the call-to-action.
+- Contains the `handleCall` function.
+- **The Demo Flow:**
+  1. User enters their phone number and country code (or clicks a hardcoded test button).
+  2. `handleCall` sends a `POST` request to the backend's `/api/call` endpoint with the concatenated phone number.
+  3. UI manages loading states and displays a success/error message.
+- Relies on `import.meta.env.VITE_BACKEND_URL` to locate the backend server (fallback to `http://localhost:3000`).
+
+#### `src/index.css`
+- Contains global Tailwind directives and custom animation keyframes for floating elements and gradients.
+
+---
+
+## 4. Current State & Recent Changes
+1. **AI Model Swap:** The backend was recently refactored to replace Hugging Face (Mistral) with Google's Gemini SDK (`gemini-2.5-flash`), because the local environment relied on `GEMINI_API_KEY`.
+2. **Local Development Tunneling:** To test locally with Twilio, a tunneling tool like `localtunnel` MUST be running (`npx localtunnel --port 3000`), and that public URL MUST be set as the `PUBLIC_BASE_URL` in the backend `.env`. Without this, Twilio cannot send webhooks back to the local machine, and no logs will appear.
+3. **Heavy Logging:** The `twilio.js` route has been heavily instrumented with `console.log` statements formatted nicely with emojis to debug the conversational latency and transcriptions in real-time on the backend terminal.
+
+## 5. Typical Data Flow for a Demo Call
+1. User clicks "Call Me" on frontend.
+2. Frontend `Fetch POST /api/call` -> Backend.
+3. Backend calls Twilio API `client.calls.create()`.
+4. User's phone rings. User answers.
+5. Twilio looks up `url` and sends Webhook `POST /twilio/voice` -> Backend.
+6. Backend returns XML (TwiML) to ask for persona choice.
+7. Twilio sends Webhook `POST /twilio/select-persona` -> Backend.
+8. Backend returns XML (TwiML) to start listening (`/transcribe`).
+9. Twilio hears user speak, transcribes it, sends Webhook `POST /twilio/process-speech` -> Backend.
+10. Backend waits for `gemini.js` (Text) -> waits for `tts.js` (Audio generation) -> returns XML to `<Play>` the audio.
+11. Loop 8-10 continues until hangup.
