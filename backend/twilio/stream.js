@@ -83,13 +83,27 @@ function handleStreamConnection(ws) {
         return;
       }
 
-      audioBuffer.push(msg.media.payload);
+      const payloadBuffer = Buffer.from(msg.media.payload, 'base64');
 
-      // Reset silence timer
-      clearTimeout(silenceTimer);
-      silenceTimer = setTimeout(() => {
-        processUtterance();
-      }, SILENCE_THRESHOLD_MS);
+      // VAD heuristic for mulaw
+      let loudCount = 0;
+      for (let i = 0; i < payloadBuffer.length; i++) {
+        let val = payloadBuffer[i];
+        let amp = val < 128 ? 127 - val : 255 - val;
+        if (amp > 20) loudCount++;
+      }
+
+      // Only reset timer if active loud speech is detected
+      if (loudCount > 15) {
+        audioBuffer.push(msg.media.payload);
+        clearTimeout(silenceTimer);
+        silenceTimer = setTimeout(() => {
+          processUtterance();
+        }, SILENCE_THRESHOLD_MS);
+      } else if (audioBuffer.length > 0) {
+        // Add trailing silence to the utterance, but let timer naturally expire
+        audioBuffer.push(msg.media.payload);
+      }
       
     } else if (msg.event === 'mark') {
       console.log(`[${callSid}] AI finished speaking, unlocking audio capture`);
