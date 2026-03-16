@@ -21,7 +21,7 @@ export default function Home() {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        body: JSON.stringify({ to: '+916306987592' })
+        body: JSON.stringify({ to: '+917390900769' })
       });
 
       console.log(`[Frontend] Response Status: ${response.status} ${response.statusText}`);
@@ -91,7 +91,7 @@ export default function Home() {
 
         <div className="bg-gray-950 rounded-xl p-4 border border-gray-800">
           <p className="text-sm text-gray-400">Target Number</p>
-          <p className="text-lg font-mono text-gray-200">+91 63069 87592</p>
+          <p className="text-lg font-mono text-gray-200">+91 73909 00769</p>
         </div>
 
         {errorMsg && (
