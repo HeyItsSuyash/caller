@@ -63,7 +63,7 @@ function handleStreamConnection(ws) {
   let audioBuffer = [];
   let isAIProcessing = false;
   let silenceTimer = null;
-  const SILENCE_THRESHOLD_MS = 1500; // Trigger STT after 1.5s of no audio
+  const SILENCE_THRESHOLD_MS = 800; // Trigger STT after 0.8s of no audio for near real-time response
   
   ws.on('message', async (message) => {
     const msg = JSON.parse(message);
