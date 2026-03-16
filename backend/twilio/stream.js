@@ -123,7 +123,7 @@ function handleStreamConnection(ws) {
       // 4. TTS (Sarvam)
       console.log(`[${callSid}] Generating TTS audio...`);
       const ttsResult = await getSarvamTTS(aiResponse.spoken, aiResponse.language);
-      
+      if (ttsResult && ttsResult.audios && ttsResult.audios.length > 0) {
         // 5. Encode back to mulaw and send to Twilio
         const base64Wav = ttsResult.audios[0];
         const wavBuffer = Buffer.from(base64Wav, 'base64');
