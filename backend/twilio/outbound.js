@@ -10,7 +10,7 @@ async function initiateOutboundCall(req, res) {
   const accountSid = process.env.TWILIO_ACCOUNT_SID;
   const authToken = process.env.TWILIO_AUTH_TOKEN;
   const from = process.env.TWILIO_PHONE_NUMBER;
-  const serverUrl = process.env.SERVER_URL;
+  const serverUrl = process.env.PUBLIC_BASE_URL || process.env.SERVER_URL;
 
   if (!accountSid || !authToken || !from || !serverUrl) {
     return res.status(500).json({ error: 'Twilio configuration missing in server environment' });
