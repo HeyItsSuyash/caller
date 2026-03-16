@@ -2,7 +2,8 @@
 
 import { useState } from 'react';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+// Replace localhost fallback with the Render backend URL
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://caller-backend.onrender.com';
 
 export default function Home() {
   const [callStatus, setCallStatus] = useState<'idle' | 'calling' | 'connected' | 'error'>('idle');
