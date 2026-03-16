@@ -19,7 +19,7 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 // Explicitly handle all preflight requests without path-validator variables
-app.options('/*', cors(corsOptions));
+app.options('*', cors(corsOptions));
 
 const { initiateOutboundCall } = require("./twilio/outbound");
 const { handleTwilioWebhook } = require("./twilio/webhook");
