@@ -14,25 +14,43 @@ export default function Home() {
     setErrorMsg('');
     
     try {
+      console.log(`[Frontend] Initiating call via ${BACKEND_URL}/call/outbound`);
       const response = await fetch(`${BACKEND_URL}/call/outbound`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Accept': 'application/json'
         },
         body: JSON.stringify({ to: '+917390900769' })
       });
 
-      const data = await response.json();
+      console.log(`[Frontend] Response Status: ${response.status} ${response.statusText}`);
+      
+      const responseText = await response.text();
+      console.log(`[Frontend] Raw Response:`, responseText);
+
+      let data;
+      try {
+        data = JSON.parse(responseText);
+      } catch (e) {
+        console.error('[Frontend] Failed to parse JSON response');
+        throw new Error(`Invalid response from server: ${response.status}`);
+      }
       
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to initiate call');
+        throw new Error(data.error || `Server error: ${response.status}`);
       }
 
       setCallStatus('connected');
     } catch (err: any) {
-      console.error('Call failed:', err);
+      console.error('[Frontend] Call failed with details:', {
+        message: err.message,
+        name: err.name,
+        stack: err.stack,
+        url: BACKEND_URL
+      });
       setCallStatus('error');
-      setErrorMsg(err.message);
+      setErrorMsg(`Connection error: ${err.message}. Check console for details.`);
     }
   };
 
