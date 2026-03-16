@@ -10,10 +10,9 @@ app.use(express.urlencoded({ extended: true }));
 
 // Configure permissive CORS for the frontend deployed on Vercel
 const corsOptions = {
-  origin: '*', // Better to specific origins in prod, e.g., 'https://callerai-five.vercel.app'
+  origin: '*', // Better to specify exact origin in prod
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
-  credentials: true,
   optionsSuccessStatus: 200 // Some legacy browsers (IE11, various SmartTVs) choke on 204
 };
 
