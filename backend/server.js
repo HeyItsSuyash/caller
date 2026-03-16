@@ -60,13 +60,16 @@ const frontendClients = new Set();
 
 // WebSocket connection handler
 wss.on("connection", (ws, req) => {
-  if (req.url === "/twilio/stream") {
+  console.log(`[WebSocket] Incoming connection to URL: ${req.url}`);
+  
+  if (req.url.startsWith("/twilio/stream")) {
     handleStreamConnection(ws);
-  } else if (req.url === "/live") {
+  } else if (req.url.startsWith("/live")) {
     console.log("Frontend client connected for live updates");
     frontendClients.add(ws);
     ws.on("close", () => frontendClients.delete(ws));
   } else {
+    console.log(`[WebSocket] Unknown connection path: ${req.url}`);
     ws.on("message", (msg) => console.log("Other WS msg:", msg));
   }
 });
