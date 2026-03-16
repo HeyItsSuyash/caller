@@ -21,6 +21,7 @@ async function getSarvamSTT(pcm16WavBuffer) {
       body: form
     });
     const data = await response.json();
+    console.log(`[Sarvam API] STT Raw Response:`, JSON.stringify(data));
     console.log(`[Sarvam API] STT Response received successfully. Transcript: "${data.transcript}" (Language: ${data.language_code})`);
     return data; // Expected { transcript: "...", ... }
   } catch (err) {
