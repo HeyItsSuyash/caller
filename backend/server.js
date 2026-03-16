@@ -1,4 +1,14 @@
 require("dotenv").config();
+const { execSync } = require('child_process');
+
+try {
+  execSync('ffmpeg -version', { stdio: 'ignore' });
+  console.log('[startup] ffmpeg found');
+} catch {
+  console.error('[startup] ffmpeg NOT found — audio pipeline will fail. Install ffmpeg.');
+  process.exit(1);
+}
+
 const express = require("express");
 const http = require("http");
 const WebSocket = require("ws");

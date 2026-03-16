@@ -1,33 +1,60 @@
-const { WaveFile } = require('wavefile');
-const { getCallSession, addTurn, createCallSession } = require('../state/calls');
+const { getCallSession, addTurn, createCallSession, updateCallSession } = require('../state/calls');
 const { getSarvamSTT, getSarvamTTS } = require('../services/sarvam');
 const { getGroqResponse, summarizeCall } = require('../services/groq');
-const { updateCallSession } = require('../state/calls');
+const { spawn } = require('child_process');
 
-// Helper to convert mulaw base64 to 16kHz PCM WAV
-function mulawToWavBuffer(base64MulawChunks) {
-  const mulawBuffer = Buffer.concat(base64MulawChunks.map(c => Buffer.from(c, 'base64')));
-  
-  const wav = new WaveFile();
-  // 8000 Hz, 8-bit mulaw (encoding code 7)
-  wav.fromScratch(1, 8000, '8m', mulawBuffer);
-  // Resample to 16000 Hz for Sarvam
-  wav.toSampleRate(16000);
-  // Convert to 16-bit PCM (encoding code 1)
-  wav.toBitDepth('16');
-  
-  return wav.toBuffer();
+// Twilio → Sarvam: raw mulaw 8kHz chunks → PCM WAV 16kHz Buffer
+function mulawToWavBuffer(mulawBase64Chunks) {
+  return new Promise((resolve, reject) => {
+    const inputBuffer = Buffer.concat(
+      mulawBase64Chunks.map(c => Buffer.from(c, 'base64'))
+    );
+
+    const ffmpeg = spawn('ffmpeg', [
+      '-f', 'mulaw',
+      '-ar', '8000',
+      '-ac', '1',
+      '-i', 'pipe:0',
+      '-ar', '16000',
+      '-ac', '1',
+      '-f', 'wav',
+      '-acodec', 'pcm_s16le',
+      'pipe:1',
+    ]);
+
+    const chunks = [];
+    ffmpeg.stdout.on('data', d => chunks.push(d));
+    ffmpeg.stdout.on('end', () => resolve(Buffer.concat(chunks)));
+    ffmpeg.stderr.on('data', () => {});
+    ffmpeg.on('error', reject);
+
+    ffmpeg.stdin.write(inputBuffer);
+    ffmpeg.stdin.end();
+  });
 }
 
-// Helper to convert 16kHz PCM base64 (or buffer) to a raw mulaw buffer
+// Sarvam → Twilio: WAV Buffer → mulaw 8kHz buffer
 function wavToMulawBuffer(wavBuffer) {
-  const wav = new WaveFile(wavBuffer);
-  wav.toSampleRate(8000);
-  wav.toBitDepth('8m');
-  
-  // The samples are in wav.data.samples after conversion
-  // Extract raw mulaw data buffer
-  return Buffer.from(wav.data.samples);
+  return new Promise((resolve, reject) => {
+    const ffmpeg = spawn('ffmpeg', [
+      '-i', 'pipe:0',
+      '-ar', '8000',
+      '-ac', '1',
+      '-f', 'mulaw',
+      '-acodec', 'pcm_mulaw',
+      'pipe:1',
+    ]);
+
+    const chunks = [];
+    ffmpeg.stdout.on('data', d => chunks.push(d));
+    // Returning a raw Buffer, so the existing chunkSize splitting logic below stays exactly the same
+    ffmpeg.stdout.on('end', () => resolve(Buffer.concat(chunks)));
+    ffmpeg.stderr.on('data', () => {});
+    ffmpeg.on('error', reject);
+
+    ffmpeg.stdin.write(wavBuffer);
+    ffmpeg.stdin.end();
+  });
 }
 
 function handleStreamConnection(ws) {
@@ -82,8 +109,8 @@ function handleStreamConnection(ws) {
     audioBuffer = []; // Clear for next utterance
     
     try {
-      // 1. Decode & Resample
-      const pcm16Wav = mulawToWavBuffer(currentAudio);
+      // 1. Decode & Resample asynchronously
+      const pcm16Wav = await mulawToWavBuffer(currentAudio);
       
       // 2. STT (Sarvam)
       console.log(`\n--- [${callSid}] AUDIO CHUNK RECEIVED ---`);
@@ -130,8 +157,8 @@ function handleStreamConnection(ws) {
       if (ttsResult && ttsResult.audios && ttsResult.audios.length > 0) {
         // 5. Encode back to mulaw and send to Twilio
         const base64Wav = ttsResult.audios[0];
-        const wavBuffer = Buffer.from(base64Wav, 'base64');
-        const rawMulaw = wavToMulawBuffer(wavBuffer);
+        const bufferedWav = Buffer.from(base64Wav, 'base64');
+        const rawMulaw = await wavToMulawBuffer(bufferedWav);
         
         // Chunk and send audio to prevent websocket buffer overload
         const chunkSize = 4000;
