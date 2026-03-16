@@ -9,7 +9,7 @@ async function getSarvamSTT(pcm16WavBuffer) {
   const form = new FormData();
   const blob = new Blob([pcm16WavBuffer], { type: 'audio/wav' });
   form.append('file', blob, 'audio.wav');
-  form.append('model', 'sarvam-m');
+  form.append('model', 'saarika:v1');
   form.append('language_code', 'hi-IN');
 
   try {
