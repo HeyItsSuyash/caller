@@ -68,6 +68,7 @@ async function getGroqResponse(historyTurns, newTranscript) {
     });
 
     const responseContent = completion.choices[0]?.message?.content;
+    console.log(`[Groq API] Raw LLM Output:`, responseContent);
     const parsed = JSON.parse(responseContent || "{}");
     return parsed;
   } catch (error) {

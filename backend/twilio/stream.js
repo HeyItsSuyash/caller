@@ -86,7 +86,8 @@ function handleStreamConnection(ws) {
       const pcm16Wav = mulawToWavBuffer(currentAudio);
       
       // 2. STT (Sarvam)
-      console.log(`[${callSid}] Sending audio to Sarvam STT...`);
+      console.log(`\n--- [${callSid}] AUDIO CHUNK RECEIVED ---`);
+      console.log(`[${callSid}] Sending ${pcm16Wav.length} bytes of audio to Sarvam STT...`);
       const sttResult = await getSarvamSTT(pcm16Wav);
       
       if (!sttResult || !sttResult.transcript || sttResult.transcript.trim() === '') {
@@ -105,9 +106,11 @@ function handleStreamConnection(ws) {
       const session = getCallSession(callSid);
 
       // 3. LLM (Groq)
-      console.log(`[${callSid}] Querying Groq LLM...`);
+      console.log(`\n--- [${callSid}] LLM PROCESSING ---`);
+      console.log(`[${callSid}] Querying Groq LLM with prompt from conversational history...`);
       const aiResponse = await getGroqResponse(session.turns, sttResult.transcript);
-      console.log(`[${callSid}] AI will say: ${aiResponse.spoken}`);
+      console.log(`[${callSid}] LLM Answer Object:`, JSON.stringify(aiResponse, null, 2));
+      console.log(`[${callSid}] AI will say: "${aiResponse.spoken}" (Language: ${aiResponse.language})`);
       
       addTurn(callSid, {
         timestamp: new Date().toISOString(),
@@ -121,7 +124,8 @@ function handleStreamConnection(ws) {
       // Optionally emit to frontend via SSE here
 
       // 4. TTS (Sarvam)
-      console.log(`[${callSid}] Generating TTS audio...`);
+      console.log(`\n--- [${callSid}] TTS GENERATION ---`);
+      console.log(`[${callSid}] Requesting TTS from Sarvam for text: "${aiResponse.spoken}"...`);
       const ttsResult = await getSarvamTTS(aiResponse.spoken, aiResponse.language);
       if (ttsResult && ttsResult.audios && ttsResult.audios.length > 0) {
         // 5. Encode back to mulaw and send to Twilio

@@ -21,6 +21,7 @@ async function getSarvamSTT(pcm16WavBuffer) {
       body: form
     });
     const data = await response.json();
+    console.log(`[Sarvam API] STT Response received successfully. Transcript: "${data.transcript}" (Language: ${data.language_code})`);
     return data; // Expected { transcript: "...", ... }
   } catch (err) {
     console.error("Sarvam STT Error:", err);
@@ -54,6 +55,11 @@ async function getSarvamTTS(text, language = 'hi') {
     
     // Sarvam returns { audios: ["base64_encoded_audio"] }
     const data = await response.json();
+    if (data.audios && data.audios.length > 0) {
+      console.log(`[Sarvam API] TTS Audio received successfully. Bytes Length: ${data.audios[0].length}`);
+    } else {
+      console.warn(`[Sarvam API] TTS Audio was empty or failed. Response:`, data);
+    }
     return data;
   } catch (err) {
     console.error("Sarvam TTS Error:", err);
