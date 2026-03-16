@@ -7,12 +7,19 @@ const cors = require("cors");
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
 // Configure permissive CORS for the frontend deployed on Vercel
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'Accept']
-}));
+const corsOptions = {
+  origin: '*', // Better to specific origins in prod, e.g., 'https://callerai-five.vercel.app'
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'Accept'],
+  credentials: true,
+  optionsSuccessStatus: 200 // Some legacy browsers (IE11, various SmartTVs) choke on 204
+};
+
+app.use(cors(corsOptions));
+// Explicitly handle all preflight requests
+app.options('*', cors(corsOptions));
 
 const { initiateOutboundCall } = require("./twilio/outbound");
 const { handleTwilioWebhook } = require("./twilio/webhook");
