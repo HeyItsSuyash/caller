@@ -1,5 +1,5 @@
 const { getCallSession, addTurn, createCallSession, updateCallSession } = require('../state/calls');
-const { getGroqSTT, getElevenLabsTTS } = require('../services/speech');
+const { getGroqSTT, getGoogleTTS } = require('../services/speech');
 const { getGroqResponse, summarizeCall } = require('../services/groq');
 const { spawn } = require('child_process');
 
@@ -164,10 +164,10 @@ function handleStreamConnection(ws) {
       });
       // Optionally emit to frontend via SSE here
 
-      // 4. TTS (ElevenLabs)
+      // 4. TTS (Google TTS)
       console.log(`\n--- [${callSid}] TTS GENERATION ---`);
-      console.log(`[${callSid}] Requesting TTS from ElevenLabs for text: "${aiResponse.spoken}"...`);
-      const ttsBuffer = await getElevenLabsTTS(aiResponse.spoken, aiResponse.language);
+      console.log(`[${callSid}] Requesting TTS from Google for text: "${aiResponse.spoken}"...`);
+      const ttsBuffer = await getGoogleTTS(aiResponse.spoken, aiResponse.language);
       if (ttsBuffer) {
         // 5. Encode back to mulaw and send to Twilio
         const rawMulaw = await wavToMulawBuffer(ttsBuffer);

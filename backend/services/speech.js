@@ -34,47 +34,35 @@ async function getGroqSTT(pcm16WavBuffer) {
   }
 }
 
-// Generate MP3 audio buffer from ElevenLabs TTL
-async function getElevenLabsTTS(text, language = 'hi') {
-  // Use the Neelam voice ID from the .env, fallback to a standard one
-  const voiceId = process.env.VOICE_ID_NEELAM || '1zUSi8LeHs9M2mV8X6YS';
-  const url = `https://api.elevenlabs.io/v1/text-to-speech/${voiceId}`;
-  
+const googleTTS = require('google-tts-api');
+
+// Generate MP3 audio buffer from Free Google TTS
+async function getGoogleTTS(text, language = 'hi') {
   try {
-    const response = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'xi-api-key': process.env.ELEVENLABS_API_KEY,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        text: text,
-        model_id: 'eleven_multilingual_v2', // Required for Hindi support
-        voice_settings: {
-          similarity_boost: 0.5,
-          stability: 0.5
-        }
-      })
+    // Generate the audio URL using the free Google Translate TTS engine
+    const url = googleTTS.getAudioUrl(text, {
+      lang: language.includes('en') ? 'en-IN' : 'hi-IN',
+      slow: false,
+      host: 'https://translate.google.com',
     });
-    
+
+    const response = await fetch(url);
     if (!response.ok) {
-      const data = await response.json();
-      console.error(`[ElevenLabs API] HTTP Error ${response.status}:`, data);
-      throw new Error(`ElevenLabs TTS Failed: ${response.status}`);
+      throw new Error(`Google TTS Failed: ${response.status}`);
     }
     
     const arrayBuffer = await response.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
     
-    console.log(`[ElevenLabs API] TTS Audio received successfully. Bytes Length: ${buffer.length}`);
-    return buffer; // Natively an MP3 buffer
+    console.log(`[Google TTS] Audio received successfully. Bytes Length: ${buffer.length}`);
+    return buffer; // Returns MP3 buffer, exactly like ElevenLabs did
   } catch (err) {
-    console.error("ElevenLabs TTS Error:", err);
+    console.error("Google TTS Error:", err);
     return null;
   }
 }
 
 module.exports = {
   getGroqSTT,
-  getElevenLabsTTS
+  getGoogleTTS
 };
