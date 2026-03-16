@@ -39,14 +39,14 @@ Respond with a JSON object in this exact structure:
 }
 `;
 
-async function getGroqResponse(historyTruns, newTranscript) {
+async function getGroqResponse(historyTurns, newTranscript) {
   // Format history for Groq messages array
   const messages = [
     { role: "system", content: SYSTEM_PROMPT }
   ];
 
   // Append history (limit to last 10 turns to save tokens/latency)
-  const recentTurns = historyTruns.slice(-10);
+  const recentTurns = historyTurns.slice(-10);
   for (const turn of recentTurns) {
     if (turn.speaker === 'user') {
       messages.push({ role: 'user', content: turn.text });

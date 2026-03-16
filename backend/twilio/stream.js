@@ -19,16 +19,15 @@ function mulawToWavBuffer(base64MulawChunks) {
   return wav.toBuffer();
 }
 
-// Helper to convert 16kHz PCM base64 (or buffer) to mulaw 8kHz base64
-function wavToMulawBase64(wavBuffer) {
+// Helper to convert 16kHz PCM base64 (or buffer) to a raw mulaw buffer
+function wavToMulawBuffer(wavBuffer) {
   const wav = new WaveFile(wavBuffer);
   wav.toSampleRate(8000);
   wav.toBitDepth('8m');
   
   // The samples are in wav.data.samples after conversion
-  // Extract raw mulaw data
-  const rawMulaw = Buffer.from(wav.data.samples);
-  return rawMulaw.toString('base64');
+  // Extract raw mulaw data buffer
+  return Buffer.from(wav.data.samples);
 }
 
 function handleStreamConnection(ws) {
@@ -52,14 +51,9 @@ function handleStreamConnection(ws) {
       }
     } else if (msg.event === 'media') {
       if (isAIProcessing) {
-        // Barge-in detected!
-        // For MVP: if we receive audio while AI is speaking, we could abort, 
-        // but for now, we just skip it or stop the playback.
-        ws.send(JSON.stringify({
-          event: 'clear',
-          streamSid: streamSid
-        }));
-        isAIProcessing = false;
+        // Half-duplex MVP: do not collect audio or trigger STT while the AI is listening/speaking
+        // This avoids echoing itself and background noise triggering a self-interruption loop.
+        return;
       }
 
       audioBuffer.push(msg.media.payload);
@@ -70,6 +64,10 @@ function handleStreamConnection(ws) {
         processUtterance();
       }, SILENCE_THRESHOLD_MS);
       
+    } else if (msg.event === 'mark') {
+      console.log(`[${callSid}] AI finished speaking, unlocking audio capture`);
+      isAIProcessing = false;
+      audioBuffer = []; // Clear any residual noise buffer
     } else if (msg.event === 'stop') {
       console.log(`Stream stopped: ${streamSid}`);
       processPostCallSummary(callSid);
@@ -126,24 +124,36 @@ function handleStreamConnection(ws) {
       console.log(`[${callSid}] Generating TTS audio...`);
       const ttsResult = await getSarvamTTS(aiResponse.spoken, aiResponse.language);
       
-      if (ttsResult && ttsResult.audios && ttsResult.audios.length > 0) {
         // 5. Encode back to mulaw and send to Twilio
         const base64Wav = ttsResult.audios[0];
         const wavBuffer = Buffer.from(base64Wav, 'base64');
-        const mulawPayload = wavToMulawBase64(wavBuffer);
+        const rawMulaw = wavToMulawBuffer(wavBuffer);
         
+        // Chunk and send audio to prevent websocket buffer overload
+        const chunkSize = 4000;
+        for (let i = 0; i < rawMulaw.length; i += chunkSize) {
+          const chunk = rawMulaw.slice(i, i + chunkSize);
+          ws.send(JSON.stringify({
+            event: 'media',
+            streamSid: streamSid,
+            media: {
+              payload: chunk.toString('base64')
+            }
+          }));
+        }
+
+        // Send Mark to release half-duplex lock
         ws.send(JSON.stringify({
-          event: 'media',
+          event: 'mark',
           streamSid: streamSid,
-          media: {
-            payload: mulawPayload
-          }
+          mark: { name: 'ai_done' }
         }));
+      } else {
+         isAIProcessing = false; // no audio returned
       }
 
     } catch (e) {
       console.error(`[${callSid}] Error in audio pipeline:`, e);
-    } finally {
       isAIProcessing = false;
     }
   }

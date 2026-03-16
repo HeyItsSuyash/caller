@@ -1,5 +1,5 @@
-const fs = require('fs');
-const FormData = require('form-data');
+// Use native fetch and FormData
+// No need for 'form-data' require
 
 // Example Sarvam fetch. Sarvam typically accepts form-data for STT.
 // Twilio sends mulaw 8kHz. We need to decode it to 16kHz PCM first before STT.
@@ -7,21 +7,16 @@ async function getSarvamSTT(pcm16WavBuffer) {
   const url = 'https://api.sarvam.ai/speech-to-text';
   
   const form = new FormData();
-  form.append('file', pcm16WavBuffer, {
-    filename: 'audio.wav',
-    contentType: 'audio/wav',
-  });
+  const blob = new Blob([pcm16WavBuffer], { type: 'audio/wav' });
+  form.append('file', blob, 'audio.wav');
   form.append('model', 'sarvam-m');
-  form.append('language_code', 'hi-IN'); // hi-IN allows auto-detecting English as well per requirements
+  form.append('language_code', 'hi-IN');
 
   try {
     const response = await fetch(url, {
       method: 'POST',
       headers: {
-        'api-subscription-key': process.env.SARVAM_API_KEY,
-        // FormData boundary headers are automatically set by node-fetch/form-data integration,
-        // but we'll use form.getHeaders().
-        ...form.getHeaders()
+        'api-subscription-key': process.env.SARVAM_API_KEY
       },
       body: form
     });
