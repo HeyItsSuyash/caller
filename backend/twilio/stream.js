@@ -1,5 +1,5 @@
 const { getCallSession, addTurn, createCallSession, updateCallSession } = require('../state/calls');
-const { getSarvamSTT, getSarvamTTS } = require('../services/sarvam');
+const { getGroqSTT, getElevenLabsTTS } = require('../services/speech');
 const { getGroqResponse, summarizeCall } = require('../services/groq');
 const { spawn } = require('child_process');
 
@@ -126,10 +126,10 @@ function handleStreamConnection(ws) {
       // 1. Decode & Resample asynchronously
       const pcm16Wav = await mulawToWavBuffer(currentAudio);
       
-      // 2. STT (Sarvam)
+      // 2. STT (Groq Whisper)
       console.log(`\n--- [${callSid}] AUDIO CHUNK RECEIVED ---`);
-      console.log(`[${callSid}] Sending ${pcm16Wav.length} bytes of audio to Sarvam STT...`);
-      const sttResult = await getSarvamSTT(pcm16Wav);
+      console.log(`[${callSid}] Sending ${pcm16Wav.length} bytes of audio to Groq Whisper STT...`);
+      const sttResult = await getGroqSTT(pcm16Wav);
       
       if (!sttResult || !sttResult.transcript || sttResult.transcript.trim() === '') {
         isAIProcessing = false;
@@ -164,15 +164,13 @@ function handleStreamConnection(ws) {
       });
       // Optionally emit to frontend via SSE here
 
-      // 4. TTS (Sarvam)
+      // 4. TTS (ElevenLabs)
       console.log(`\n--- [${callSid}] TTS GENERATION ---`);
-      console.log(`[${callSid}] Requesting TTS from Sarvam for text: "${aiResponse.spoken}"...`);
-      const ttsResult = await getSarvamTTS(aiResponse.spoken, aiResponse.language);
-      if (ttsResult && ttsResult.audios && ttsResult.audios.length > 0) {
+      console.log(`[${callSid}] Requesting TTS from ElevenLabs for text: "${aiResponse.spoken}"...`);
+      const ttsBuffer = await getElevenLabsTTS(aiResponse.spoken, aiResponse.language);
+      if (ttsBuffer) {
         // 5. Encode back to mulaw and send to Twilio
-        const base64Wav = ttsResult.audios[0];
-        const bufferedWav = Buffer.from(base64Wav, 'base64');
-        const rawMulaw = await wavToMulawBuffer(bufferedWav);
+        const rawMulaw = await wavToMulawBuffer(ttsBuffer);
         
         // Chunk and send audio to prevent websocket buffer overload
         const chunkSize = 4000;
