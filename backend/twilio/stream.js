@@ -125,6 +125,9 @@ function handleStreamConnection(ws) {
       audioBuffer = []; // Clear any residual noise buffer
     } else if (msg.event === 'stop') {
       console.log(`Stream stopped: ${streamSid}`);
+      if (global.broadcastEvent) {
+        global.broadcastEvent('call_ended', { callSid });
+      }
       processPostCallSummary(callSid);
     }
   });

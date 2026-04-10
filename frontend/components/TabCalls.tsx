@@ -4,14 +4,15 @@ import { Phone, Clock, FileText, ChevronRight, Activity } from 'lucide-react';
 interface TabCallsProps {
   transcripts: any[];
   callStatus: string;
-  onCall: () => void;
+  onCall: (number: string) => void;
 }
 
 const TabCalls: React.FC<TabCallsProps> = ({ transcripts, callStatus, onCall }) => {
   const [selectedCall, setSelectedCall] = React.useState<number | null>(0);
+  const [phoneNumber, setPhoneNumber] = React.useState('+916306987592');
 
   const calls = [
-    { id: 0, number: '+91 63069 87592', time: 'Just now', duration: '--:--', status: 'Active' },
+    { id: 0, number: phoneNumber, time: 'Just now', duration: '--:--', status: callStatus === 'connected' ? 'Active' : 'Ended' },
     { id: 1, number: '+1 339 201 6440', time: '2 hours ago', duration: '5:24', status: 'Completed' },
     { id: 2, number: '+91 99887 76655', time: 'Yesterday', duration: '3:12', status: 'Completed' },
     { id: 3, number: '+44 20 7946 0958', time: '2 days ago', duration: '1:45', status: 'Completed' },
@@ -21,18 +22,35 @@ const TabCalls: React.FC<TabCallsProps> = ({ transcripts, callStatus, onCall }) 
     <div className="flex h-full divide-x divide-border">
       {/* Left Panel: Call List */}
       <div className="w-1/3 flex flex-col h-full overflow-hidden">
-        <div className="p-6 border-b border-border flex justify-between items-center">
-          <h2 className="text-lg font-semibold">Call History</h2>
-          <button 
-            onClick={onCall}
-            disabled={callStatus === 'calling' || callStatus === 'connected'}
-            className={`flex items-center gap-2 py-2 px-4 rounded-md text-xs font-semibold
-              ${callStatus === 'idle' ? 'bg-black text-white hover:bg-black/90' : 'bg-accent text-secondary'}
-            `}
-          >
-            <Phone className="w-3 h-3" />
-            <span>{callStatus === 'connected' ? 'Connected' : 'Initiate Call'}</span>
-          </button>
+        <div className="p-6 border-b border-border flex flex-col gap-4">
+          <div className="flex justify-between items-center">
+            <h2 className="text-lg font-semibold">Call History</h2>
+          </div>
+          <div className="flex gap-2">
+            <input 
+              type="text" 
+              value={phoneNumber}
+              onChange={(e) => setPhoneNumber(e.target.value)}
+              placeholder="Enter number..."
+              className="flex-1 px-3 py-2 bg-accent/30 border border-border rounded-md text-xs font-medium focus:outline-none focus:border-black transition-colors"
+            />
+            <button 
+              onClick={() => onCall(phoneNumber)}
+              disabled={callStatus === 'calling' || callStatus === 'connected'}
+              className={`flex items-center gap-2 py-2 px-4 rounded-md text-xs font-semibold whitespace-nowrap
+                ${callStatus === 'idle' || callStatus === 'error' ? 'bg-black text-white hover:bg-black/90' : 'bg-accent text-secondary'}
+              `}
+            >
+              <Phone className="w-3 h-3" />
+              <span>{callStatus === 'connected' ? 'Connected' : callStatus === 'calling' ? 'Calling...' : 'Call'}</span>
+            </button>
+          </div>
+          {callStatus === 'idle' && transcripts.length > 0 && (
+            <div className="px-3 py-1.5 bg-rose-50 text-rose-600 text-[10px] font-bold uppercase tracking-widest rounded border border-rose-100 flex items-center gap-2">
+              <div className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+              Call Ended
+            </div>
+          )}
         </div>
         
         <div className="flex-1 overflow-y-auto">

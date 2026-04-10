@@ -12,7 +12,7 @@ interface MainWorkspaceProps {
   activeEntity: string;
   transcripts: any[];
   callStatus: string;
-  onCall: () => void;
+  onCall: (number: string) => void;
   analyticsData: any[];
 }
 

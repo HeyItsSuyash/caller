@@ -122,8 +122,67 @@ async function getAllAnalytics() {
   }
 }
 
+/**
+ * Fetch all knowledge source documents/text blocks.
+ */
+async function getKnowledge() {
+  try {
+    const database = await connect();
+    if (!database) return [];
+    
+    return await database.collection('knowledge')
+      .find({})
+      .sort({ created_at: -1 })
+      .toArray();
+  } catch (err) {
+    console.error('[MongoDB] Error fetching knowledge:', err.message);
+    return [];
+  }
+}
+
+/**
+ * Add a new knowledge source.
+ */
+async function addKnowledge(data) {
+  try {
+    const database = await connect();
+    if (!database) return null;
+    
+    const doc = {
+      ...data,
+      created_at: new Date().toISOString()
+    };
+    
+    const result = await database.collection('knowledge').insertOne(doc);
+    return { ...doc, _id: result.insertedId };
+  } catch (err) {
+    console.error('[MongoDB] Error adding knowledge:', err.message);
+    return null;
+  }
+}
+
+/**
+ * Delete a knowledge source.
+ */
+async function deleteKnowledge(id) {
+  try {
+    const database = await connect();
+    if (!database) return false;
+    
+    const { ObjectId } = require('mongodb');
+    const result = await database.collection('knowledge').deleteOne({ _id: new ObjectId(id) });
+    return result.deletedCount > 0;
+  } catch (err) {
+    console.error('[MongoDB] Error deleting knowledge:', err.message);
+    return false;
+  }
+}
+
 module.exports = {
   getCallMemory,
   saveCallSummary,
-  getAllAnalytics
+  getAllAnalytics,
+  getKnowledge,
+  addKnowledge,
+  deleteKnowledge
 };

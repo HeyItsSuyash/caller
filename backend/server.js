@@ -32,7 +32,7 @@ const { initiateOutboundCall } = require("./twilio/outbound");
 const { handleTwilioWebhook } = require("./twilio/webhook");
 const { handleStreamConnection } = require("./twilio/stream");
 const { getCallSession, getAllCalls } = require("./state/calls");
-const { getAllAnalytics } = require("./services/mongodb");
+const { getAllAnalytics, getKnowledge, addKnowledge, deleteKnowledge } = require("./services/mongodb");
 
 app.get("/health", (req, res) => {
   res.status(200).send("OK");
@@ -61,6 +61,23 @@ app.get("/call/:sid/summary", (req, res) => {
 app.get("/analytics", async (req, res) => {
   const data = await getAllAnalytics();
   res.json(data);
+});
+
+// Knowledge Base APIs
+app.get("/knowledge", async (req, res) => {
+  const data = await getKnowledge();
+  res.json(data);
+});
+
+app.post("/knowledge/text", async (req, res) => {
+  const { title, content } = req.body;
+  const result = await addKnowledge({ title, content, type: 'TEXT' });
+  res.json(result);
+});
+
+app.delete("/knowledge/:id", async (req, res) => {
+  const success = await deleteKnowledge(req.params.id);
+  res.json({ success });
 });
 
 

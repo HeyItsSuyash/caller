@@ -40,7 +40,11 @@ export default function Home() {
       try {
         const payload = JSON.parse(event.data);
         if (payload.event === 'transcript') {
-          setTranscripts(prev => [...prev.slice(-15), payload.data]); // Keep more for the new scrollable UI
+          setTranscripts(prev => [...prev.slice(-15), payload.data]);
+        } else if (payload.event === 'call_ended') {
+          console.log('Call ended notification received');
+          setCallStatus('idle');
+          fetchAnalytics(); // Refresh history/analytics when call ends
         }
       } catch (err) {
         console.error('WebSocket message error:', err);
@@ -53,11 +57,11 @@ export default function Home() {
     return () => ws.close();
   }, []);
 
-  const handleCall = async () => {
+  const handleCall = async (number: string) => {
     setCallStatus('calling');
     setTranscripts([]);
     setErrorMsg('');
-    setActiveTab('Calls'); // Auto-switch to calls tab on initiation
+    setActiveTab('Calls'); 
 
     try {
       const response = await fetch(`${BACKEND_URL}/call/outbound`, {
@@ -66,7 +70,7 @@ export default function Home() {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        body: JSON.stringify({ to: '+916306987592' })
+        body: JSON.stringify({ to: number })
       });
 
       const data = await response.json();
