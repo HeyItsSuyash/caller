@@ -1,9 +1,10 @@
 const { getCallSession, addTurn, createCallSession, updateCallSession } = require('../state/calls');
 const { getGroqSTT, getGoogleTTS } = require('../services/speech');
-const { getGroqResponse, summarizeCall } = require('../services/groq');
+const { getLLMResponse, summarizeCall } = require('../services/llm');
+const { getCallMemory, saveCallSummary } = require('../services/mongodb');
 const { spawn } = require('child_process');
 
-// Twilio → Sarvam: raw mulaw 8kHz chunks → PCM WAV 16kHz Buffer
+// Twilio → CALLER AI: raw mulaw 8kHz chunks → PCM WAV 16kHz Buffer
 function mulawToWavBuffer(mulawBase64Chunks) {
   return new Promise((resolve, reject) => {
     const inputBuffer = Buffer.concat(
@@ -33,7 +34,7 @@ function mulawToWavBuffer(mulawBase64Chunks) {
   });
 }
 
-// Sarvam → Twilio: WAV Buffer → mulaw 8kHz buffer
+// CALLER AI → Twilio: WAV Buffer → mulaw 8kHz buffer
 function wavToMulawBuffer(wavBuffer) {
   return new Promise((resolve, reject) => {
     const ffmpeg = spawn('ffmpeg', [
@@ -72,14 +73,27 @@ function handleStreamConnection(ws) {
       streamSid = msg.start.streamSid;
       callSid = msg.start.callSid;
       console.log(`Stream started: ${streamSid} for call: ${callSid}`);
-      // Initialize state
-      if (!getCallSession(callSid)) {
-        createCallSession(callSid);
+      
+      // Initialize state if not already done by outbound
+      let session = getCallSession(callSid);
+      if (!session) {
+        session = createCallSession(callSid);
       }
+
+      // FETCH MEMORY from MongoDB
+      if (session.phoneNumber && session.phoneNumber !== 'unknown') {
+        console.log(`[MongoDB] Fetching previous summaries for ${session.phoneNumber}...`);
+        getCallMemory(session.phoneNumber).then(memory => {
+          if (memory && memory.length > 0) {
+            console.log(`[MongoDB] Found ${memory.length} previous interactions for ${session.phoneNumber}`);
+            updateCallSession(callSid, { memory });
+          }
+        });
+      }
+
     } else if (msg.event === 'media') {
       if (isAIProcessing) {
         // Half-duplex MVP: do not collect audio or trigger STT while the AI is listening/speaking
-        // This avoids echoing itself and background noise triggering a self-interruption loop.
         return;
       }
 
@@ -144,12 +158,22 @@ function handleStreamConnection(ws) {
         language: sttResult.language_code || 'hi' // fallback
       });
 
+      // Broadcast to Frontend
+      if (global.broadcastEvent) {
+        console.log(`[Stream] Broadcasting user transcript: ${sttResult.transcript}`);
+        global.broadcastEvent('transcript', {
+          speaker: 'user',
+          text: sttResult.transcript,
+          id: Date.now()
+        });
+      }
+
       const session = getCallSession(callSid);
 
-      // 3. LLM (Groq)
+      // 3. LLM (CALLER AI)
       console.log(`\n--- [${callSid}] LLM PROCESSING ---`);
-      console.log(`[${callSid}] Querying Groq LLM with prompt from conversational history...`);
-      const aiResponse = await getGroqResponse(session.turns, sttResult.transcript);
+      console.log(`[${callSid}] Querying CALLER AI LLM...`);
+      const aiResponse = await getLLMResponse(session.turns, sttResult.transcript, session.memory || []);
       console.log(`[${callSid}] LLM Answer Object:`, JSON.stringify(aiResponse, null, 2));
       console.log(`[${callSid}] AI will say: "${aiResponse.spoken}" (Language: ${aiResponse.language})`);
       
@@ -162,7 +186,16 @@ function handleStreamConnection(ws) {
         sentiment: aiResponse.sentiment,
         language: aiResponse.language
       });
-      // Optionally emit to frontend via SSE here
+
+      // Broadcast to Frontend
+      if (global.broadcastEvent) {
+        console.log(`[Stream] Broadcasting AI transcript: ${aiResponse.spoken}`);
+        global.broadcastEvent('transcript', {
+          speaker: 'ai',
+          text: aiResponse.spoken,
+          id: Date.now()
+        });
+      }
 
       // 4. TTS (Google TTS)
       console.log(`\n--- [${callSid}] TTS GENERATION ---`);
@@ -204,11 +237,17 @@ function handleStreamConnection(ws) {
 
 async function processPostCallSummary(callSid) {
   const session = getCallSession(callSid);
-  if (!session) return;
+  if (!session) {
+    console.error(`[${callSid}] Error: No session found for summary generation.`);
+    return;
+  }
   
-  if (session.turns.length === 0) return;
+  if (session.turns.length === 0) {
+    console.log(`[${callSid}] No conversation turns detected. Skipping summary.`);
+    return;
+  }
   
-  console.log(`[${callSid}] Generating post-call summary...`);
+  console.log(`[${callSid}] Generating post-call summary and intent for ${session.turns.length} turns...`);
   const summary = await summarizeCall(session.turns);
   
   if (summary) {
@@ -216,7 +255,23 @@ async function processPostCallSummary(callSid) {
       summary: summary,
       resolution_status: summary.resolution || 'pending'
     });
-    console.log(`[${callSid}] Summary generated:`, summary.summary);
+    console.log(`[${callSid}] Summary generated: "${summary.summary.substring(0, 50)}..."`);
+    
+    // SAVE TO MongoDB
+    if (session.phoneNumber && session.phoneNumber !== 'unknown') {
+      console.log(`[MongoDB] Attempting to save summary for ${session.phoneNumber}...`);
+      try {
+        await saveCallSummary(session.phoneNumber, summary);
+        console.log(`[MongoDB] Summary saved successfully for ${session.phoneNumber}`);
+      } catch (err) {
+        console.error(`[MongoDB] FATAL Error saving summary for ${session.phoneNumber}:`, err.message);
+        if (err.details) console.error(`[MongoDB] Error Details:`, err.details);
+      }
+    } else {
+      console.warn(`[MongoDB] Cannot save summary: Phone number is "${session.phoneNumber}". Ensure outbound call initialized it.`);
+    }
+  } else {
+    console.error(`[${callSid}] Failed to generate summary from LLM.`);
   }
 }
 

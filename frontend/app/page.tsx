@@ -1,105 +1,118 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import Sidebar from '../components/Sidebar';
+import MainWorkspace from '../components/MainWorkspace';
+import EntityModal from '../components/EntityModal';
 
-// Replace localhost fallback with the Render backend URL
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://caller-24ie.onrender.com';
 
 export default function Home() {
+  const [activeTab, setActiveTab] = useState('Calls');
+  const [activeEntity, setActiveEntity] = useState('Admission Bot');
   const [callStatus, setCallStatus] = useState<'idle' | 'calling' | 'connected' | 'error'>('idle');
+  const [transcripts, setTranscripts] = useState<any[]>([]);
+  const [analyticsData, setAnalyticsData] = useState<any[]>([]);
   const [errorMsg, setErrorMsg] = useState('');
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const entities = ['Admission Bot', 'Support Bot', 'Sales Bot'];
+
+  useEffect(() => {
+    // 1. Fetch Initial Analytics
+    const fetchAnalytics = async () => {
+      try {
+        const response = await fetch(`${BACKEND_URL}/analytics`);
+        const data = await response.json();
+        setAnalyticsData(data);
+      } catch (err) {
+        console.error('Error fetching analytics:', err);
+      }
+    };
+    fetchAnalytics();
+
+    // 2. Build the live WebSocket URL
+    const wsUrl = BACKEND_URL.replace(/^http/, 'ws') + '/live';
+    const ws = new WebSocket(wsUrl);
+
+    ws.onopen = () => console.log('Connected to live transcript stream');
+    ws.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        if (payload.event === 'transcript') {
+          setTranscripts(prev => [...prev.slice(-15), payload.data]); // Keep more for the new scrollable UI
+        }
+      } catch (err) {
+        console.error('WebSocket message error:', err);
+      }
+    };
+
+    ws.onerror = (err) => console.error('WebSocket Error:', err);
+    ws.onclose = () => console.log('Disconnected from live stream');
+
+    return () => ws.close();
+  }, []);
 
   const handleCall = async () => {
     setCallStatus('calling');
+    setTranscripts([]);
     setErrorMsg('');
-    
+    setActiveTab('Calls'); // Auto-switch to calls tab on initiation
+
     try {
-      console.log(`[Frontend] Initiating call via ${BACKEND_URL}/call/outbound`);
       const response = await fetch(`${BACKEND_URL}/call/outbound`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        body: JSON.stringify({ to: '+917390900769' })
+        body: JSON.stringify({ to: '+916306987592' })
       });
 
-      console.log(`[Frontend] Response Status: ${response.status} ${response.statusText}`);
-      
-      const responseText = await response.text();
-      console.log(`[Frontend] Raw Response:`, responseText);
-
-      let data;
-      try {
-        data = JSON.parse(responseText);
-      } catch (e) {
-        console.error('[Frontend] Failed to parse JSON response');
-        throw new Error(`Invalid response from server: ${response.status}`);
-      }
-      
-      if (!response.ok) {
-        throw new Error(data.error || `Server error: ${response.status}`);
-      }
-
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Server error');
       setCallStatus('connected');
     } catch (err: any) {
-      console.error('[Frontend] Call failed with details:', {
-        message: err.message,
-        name: err.name,
-        stack: err.stack,
-        url: BACKEND_URL
-      });
       setCallStatus('error');
-      setErrorMsg(`Connection error: ${err.message}. Check console for details.`);
+      setErrorMsg(err.message);
+      console.error('Call initialization failed:', err);
     }
   };
 
+  const handleNewEntity = () => {
+    setIsModalOpen(true);
+  };
+
   return (
-    <div className="min-h-screen bg-gray-950 flex flex-col items-center justify-center font-sans text-white">
-      <div className="bg-gray-900 border border-gray-800 p-8 rounded-2xl shadow-2xl max-w-md w-full text-center space-y-6">
-        <div className="space-y-2">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent">VaaniAI</h1>
-          <p className="text-gray-400">One-click AI caller demo</p>
-        </div>
+    <div className="flex bg-white h-screen w-full overflow-hidden">
+      <Sidebar 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        entities={entities}
+        activeEntity={activeEntity}
+        setActiveEntity={setActiveEntity}
+        onNewEntity={handleNewEntity}
+      />
+      <MainWorkspace 
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        activeEntity={activeEntity}
+        transcripts={transcripts}
+        callStatus={callStatus}
+        onCall={handleCall}
+        analyticsData={analyticsData}
+      />
 
-        <div className="py-8">
-          <button
-            onClick={handleCall}
-            disabled={callStatus === 'calling'}
-            className={`
-              relative group overflow-hidden rounded-full w-40 h-40 mx-auto flex flex-col items-center justify-center transition-all duration-300
-              ${callStatus === 'idle' ? 'bg-blue-600 hover:bg-blue-500 hover:scale-105 shadow-[0_0_30px_rgba(37,99,235,0.3)] hover:shadow-[0_0_50px_rgba(37,99,235,0.5)]' : ''}
-              ${callStatus === 'calling' ? 'bg-yellow-600 cursor-not-allowed animate-pulse shadow-[0_0_30px_rgba(202,138,4,0.3)]' : ''}
-              ${callStatus === 'connected' ? 'bg-green-600 hover:bg-green-500 shadow-[0_0_30px_rgba(22,163,74,0.3)]' : ''}
-              ${callStatus === 'error' ? 'bg-red-600 hover:bg-red-500 shadow-[0_0_30px_rgba(220,38,38,0.3)]' : ''}
-            `}
-          >
-            <div className="text-4xl mb-2">
-              {callStatus === 'idle' && '📞'}
-              {callStatus === 'calling' && '⏳'}
-              {callStatus === 'connected' && '✅'}
-              {callStatus === 'error' && '❌'}
-            </div>
-            <span className="font-semibold tracking-wider uppercase text-sm">
-              {callStatus === 'idle' && 'Call Now'}
-              {callStatus === 'calling' && 'Calling...'}
-              {callStatus === 'connected' && 'Call Started'}
-              {callStatus === 'error' && 'Retry'}
-            </span>
-          </button>
+      <EntityModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      
+      {/* Absolute Error Notification */}
+      {errorMsg && (
+        <div className="fixed bottom-8 right-8 bg-rose-50 border border-rose-200 p-4 rounded-lg shadow-lg flex items-center gap-3 animate-in slide-in-from-right-8 duration-300">
+          <div className="w-2 h-2 rounded-full bg-rose-500" />
+          <p className="text-xs font-semibold text-rose-700">{errorMsg}</p>
+          <button onClick={() => setErrorMsg('')} className="text-rose-400 hover:text-rose-600 ml-4 font-bold">×</button>
         </div>
-
-        <div className="bg-gray-950 rounded-xl p-4 border border-gray-800">
-          <p className="text-sm text-gray-400">Target Number</p>
-          <p className="text-lg font-mono text-gray-200">+91 73909 00769</p>
-        </div>
-
-        {errorMsg && (
-          <div className="text-red-400 text-sm bg-red-900/20 p-3 rounded-lg border border-red-900/50">
-            {errorMsg}
-          </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }

@@ -32,6 +32,7 @@ const { initiateOutboundCall } = require("./twilio/outbound");
 const { handleTwilioWebhook } = require("./twilio/webhook");
 const { handleStreamConnection } = require("./twilio/stream");
 const { getCallSession, getAllCalls } = require("./state/calls");
+const { getAllAnalytics } = require("./services/mongodb");
 
 app.get("/health", (req, res) => {
   res.status(200).send("OK");
@@ -55,6 +56,11 @@ app.get("/call/:sid/summary", (req, res) => {
   const session = getCallSession(req.params.sid);
   if (!session) return res.status(404).json({ error: "Call not found" });
   res.json({ summary: session.summary, resolution_status: session.resolution_status });
+});
+
+app.get("/analytics", async (req, res) => {
+  const data = await getAllAnalytics();
+  res.json(data);
 });
 
 
@@ -87,6 +93,7 @@ wss.on("connection", (ws, req) => {
 // A simple helper to broadcast events to all frontend clients
 function broadcastEvent(event, data) {
   const message = JSON.stringify({ event, data });
+  console.log(`[Broadcast] Sending '${event}' to ${frontendClients.size} clients`);
   for (const client of frontendClients) {
     if (client.readyState === WebSocket.OPEN) {
       client.send(message);

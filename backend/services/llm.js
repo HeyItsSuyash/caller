@@ -5,7 +5,7 @@ const groq = new Groq({
 });
 
 const SYSTEM_PROMPT = `
-You are VaaniAI, a warm, intelligent, and highly natural-sounding AI phone agent. You work for Company Name and your job is to help callers with their queries.
+You are CALLER AI, a warm, intelligent, and highly natural-sounding AI phone agent. You work for Company Name and your job is to help callers with their queries.
 
 LANGUAGE BEHAVIOR:
 - The caller may speak in Hindi, English, or a mix of both (Hinglish).
@@ -39,13 +39,18 @@ Respond with a JSON object in this exact structure:
 }
 `;
 
-async function getGroqResponse(historyTurns, newTranscript) {
-  // Format history for Groq messages array
+async function getLLMResponse(historyTurns, newTranscript, memory = []) {
+  let dynamicSystemPrompt = SYSTEM_PROMPT;
+  
+  if (memory && memory.length > 0) {
+    const memoryString = memory.map(m => `- [${m.timestamp}] ${m.text} (Intent: ${m.intent})`).join('\n');
+    dynamicSystemPrompt += `\n\nPREVIOUS INTERACTION MEMORY:\nThis user has called before. Here are the summaries of previous conversations:\n${memoryString}\n\nUse this memory to provide a personalized experience. For example, if they previously asked about a topic, you can say: "Haan, humne pichli baar is baare mein baat ki thi..." or "Aapne pehle admission ke baare mein pucha tha..."`;
+  }
+
   const messages = [
-    { role: "system", content: SYSTEM_PROMPT }
+    { role: "system", content: dynamicSystemPrompt }
   ];
 
-  // Append history (limit to last 10 turns to save tokens/latency)
   const recentTurns = historyTurns.slice(-10);
   for (const turn of recentTurns) {
     if (turn.speaker === 'user') {
@@ -55,7 +60,6 @@ async function getGroqResponse(historyTurns, newTranscript) {
     }
   }
 
-  // Add the new user transcript
   messages.push({ role: 'user', content: newTranscript });
 
   try {
@@ -68,12 +72,22 @@ async function getGroqResponse(historyTurns, newTranscript) {
     });
 
     const responseContent = completion.choices[0]?.message?.content;
-    console.log(`[Groq API] Raw LLM Output:`, responseContent);
-    const parsed = JSON.parse(responseContent || "{}");
-    return parsed;
+    console.log(`[LLM] Raw Response: "${responseContent?.substring(0, 50)}..."`);
+    
+    if (!responseContent) {
+       console.warn("[LLM] Empty response from Groq.");
+       return { spoken: "Mujhe aapki aawaz nahi aa rahi hai, kya aap wahan hain?", language: 'hi' };
+    }
+
+    try {
+      const parsed = JSON.parse(responseContent);
+      return parsed;
+    } catch (e) {
+      console.error("[LLM] JSON Parse Error:", e.message);
+      return { spoken: "Something went wrong in my logic. Please try again.", language: 'en' };
+    }
   } catch (error) {
-    console.error("Groq Error:", error);
-    // Fallback if parsing fails or error
+    console.error("[CALLER AI] Error:", error);
     return {
       spoken: "I'm sorry, I didn't quite catch that. Could you repeat?",
       intent: "unknown",
@@ -87,17 +101,15 @@ async function getGroqResponse(historyTurns, newTranscript) {
 
 async function summarizeCall(fullTranscript) {
   const SYS_PROMPT = `
-You are a call analysis AI. Given the following call transcript between an AI agent and a human caller, produce a structured summary.
+You are a call analysis AI for CALLER AI. Given the following call transcript between an AI agent and a human caller, produce a structured summary.
 Return a JSON object:
 {
   "summary": "2-3 sentence paragraph summarizing the call",
+  "key_intent": "Single clear label for the primary intent",
+  "important_details": { "topic": "detail", ... },
   "key_topics": ["topic1", "topic2"],
-  "entities": { "caller_name": "...", "account_id": "...", "product": "...", "issue": "..." },
-  "action_items": ["Action 1", "Action 2"],
-  "sentiment_arc": "started neutral, became frustrated mid-call, resolved positively",
   "resolution": "resolved | unresolved | escalated",
-  "language_used": "hindi | english | mixed",
-  "call_quality_notes": "any observations about call flow or gaps"
+  "language_used": "hindi | english | mixed"
 }
 `;
   try {
@@ -112,12 +124,12 @@ Return a JSON object:
     });
     return JSON.parse(completion.choices[0]?.message?.content || "{}");
   } catch(e) {
-    console.error("Groq Summary Error:", e);
+    console.error("[CALLER AI] Summary Error:", e);
     return null;
   }
 }
 
 module.exports = {
-  getGroqResponse,
+  getLLMResponse,
   summarizeCall
 };

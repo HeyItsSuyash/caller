@@ -1,4 +1,5 @@
 const twilio = require('twilio');
+const { createCallSession } = require('../state/calls');
 
 async function initiateOutboundCall(req, res) {
   const { to } = req.body;
@@ -24,6 +25,10 @@ async function initiateOutboundCall(req, res) {
       to: to,
       from: from,
     });
+
+    // Initialize session with phone number
+    createCallSession(call.sid, to);
+
     res.json({ success: true, callSid: call.sid });
   } catch (err) {
     console.error('Error initiating call:', err);
