@@ -76,7 +76,10 @@ export default function Home() {
     fetchAnalytics();
 
     // 2. Build the live WebSocket URL & Handle Reconnection
-    const wsUrl = BACKEND_URL.replace(/^http/, 'ws') + '/live';
+    // 2. Build the live WebSocket URL with Protocol Detection
+    const protocol = BACKEND_URL.startsWith('https') ? 'wss' : 'ws';
+    const cleanUrl = BACKEND_URL.replace(/^https?:\/\//, '');
+    const wsUrl = `${protocol}://${cleanUrl}/live`;
     let socket: WebSocket | null = null;
     let reconnectTimeout: NodeJS.Timeout;
 
