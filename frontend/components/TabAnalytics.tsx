@@ -3,14 +3,46 @@ import { TrendingUp, Users, PhoneIncoming, Clock, ArrowUpRight, ChevronRight, Me
 
 interface TabAnalyticsProps {
   analyticsData: any[];
+  isGlobal?: boolean;
 }
 
-const TabAnalytics: React.FC<TabAnalyticsProps> = ({ analyticsData }) => {
+const TabAnalytics: React.FC<TabAnalyticsProps> = ({ analyticsData, isGlobal }) => {
+  // If global, we might have a single summary object. If specific, we might have an array
+  const globalData = isGlobal && analyticsData.length > 0 ? analyticsData[0] : null;
+
   const stats = [
-    { label: 'Total Interaction', value: '2,841', change: '+12.5%', icon: PhoneIncoming, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { label: 'Avg Duration', value: '4m 32s', change: '-2.1%', icon: Clock, color: 'text-amber-600', bg: 'bg-amber-50' },
-    { label: 'Top Intent', value: 'Inquiry', change: '+5.0%', icon: TrendingUp, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    { label: 'Unique Callers', value: '1,104', change: '+18.2%', icon: Users, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+    { 
+      label: isGlobal ? 'Total System Calls' : 'Total Interaction', 
+      value: globalData ? globalData.totalCalls : (analyticsData.length || '2,841'), 
+      change: '+12.5%', 
+      icon: PhoneIncoming, 
+      color: 'text-blue-600', 
+      bg: 'bg-blue-50' 
+    },
+    { 
+      label: isGlobal ? 'Total Users' : 'Avg Duration', 
+      value: globalData ? globalData.totalUsers : '4m 32s', 
+      change: '+2.1%', 
+      icon: Users, 
+      color: 'text-amber-600', 
+      bg: 'bg-amber-50' 
+    },
+    { 
+      label: isGlobal ? 'System Intent' : 'Top Intent', 
+      value: globalData ? (globalData.topIntents?.[0]?.intent || 'N/A') : 'Inquiry', 
+      change: '+5.0%', 
+      icon: TrendingUp, 
+      color: 'text-emerald-600', 
+      bg: 'bg-emerald-50' 
+    },
+    { 
+      label: isGlobal ? 'Total Entities' : 'Unique Callers', 
+      value: globalData ? globalData.totalEntities : '1,104', 
+      change: '+18.2%', 
+      icon: Clock, 
+      color: 'text-indigo-600', 
+      bg: 'bg-indigo-50' 
+    },
   ];
 
   const recentSummaries = [
@@ -87,18 +119,18 @@ const TabAnalytics: React.FC<TabAnalyticsProps> = ({ analyticsData }) => {
             <div className="p-8 bg-black rounded-[2.5rem] shadow-xl text-white space-y-6">
               <h3 className="text-sm font-bold uppercase tracking-[0.2em] opacity-60">Top Intents</h3>
               <div className="space-y-4">
-                {[
+                {(isGlobal && globalData?.topIntents ? globalData.topIntents : [
                   { label: 'Fees Inquiry', percent: 78, color: 'bg-emerald-500' },
                   { label: 'Eligibility', percent: 45, color: 'bg-blue-500' },
                   { label: 'Hostel Info', percent: 22, color: 'bg-indigo-500' },
-                ].map((item, idx) => (
+                ]).map((item: any, idx: number) => (
                   <div key={idx} className="space-y-2">
                     <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
-                      <span>{item.label}</span>
-                      <span>{item.percent}%</span>
+                      <span>{item.intent || item.label}</span>
+                      <span>{item.count ? `${item.count} Calls` : `${item.percent}%`}</span>
                     </div>
                     <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-                      <div className={`h-full ${item.color}`} style={{ width: `${item.percent}%` }} />
+                      <div className={`h-full ${item.color || 'bg-emerald-500'}`} style={{ width: `${item.percent || (item.count ? (item.count / globalData.totalCalls * 100) : 0)}%` }} />
                     </div>
                   </div>
                 ))}

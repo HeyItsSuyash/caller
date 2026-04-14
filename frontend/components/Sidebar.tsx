@@ -9,16 +9,25 @@ import {
   Box,
   MessageSquare,
   Activity,
-  LogOut
+  LogOut,
+  ShieldCheck,
+  Layout
 } from 'lucide-react';
+import Link from 'next/link';
 
 interface SidebarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
-  entities: string[];
+  entities: any[];
   activeEntity: string;
   setActiveEntity: (entity: string) => void;
   onNewEntity: () => void;
+  user?: {
+    name: string;
+    email: string;
+    accountType: string;
+    role: string;
+  } | null;
 }
 
 const Sidebar: React.FC<SidebarProps> = ({ 
@@ -27,7 +36,8 @@ const Sidebar: React.FC<SidebarProps> = ({
   entities, 
   activeEntity, 
   setActiveEntity,
-  onNewEntity 
+  onNewEntity,
+  user
 }) => {
   const navItems = [
     { name: 'Dashboard', icon: LayoutDashboard },
@@ -59,13 +69,13 @@ const Sidebar: React.FC<SidebarProps> = ({
           <div className="space-y-1">
             {entities.map((entity) => (
               <button
-                key={entity}
-                onClick={() => setActiveEntity(entity)}
+                key={entity._id || entity.name}
+                onClick={() => setActiveEntity(entity.name)}
                 className={`w-full text-left px-3 py-2 rounded-md text-sm transition-colors ${
-                  activeEntity === entity ? 'sidebar-item-active shadow-sm' : 'text-secondary hover:text-primary hover:bg-accent'
+                  activeEntity === entity.name ? 'sidebar-item-active shadow-sm' : 'text-secondary hover:text-primary hover:bg-accent'
                 }`}
               >
-                {entity}
+                {entity.name}
               </button>
             ))}
           </div>
@@ -86,6 +96,33 @@ const Sidebar: React.FC<SidebarProps> = ({
             </button>
           ))}
         </nav>
+
+        {user?.role === 'admin' && (
+          <div className="mt-8 space-y-1">
+            <h3 className="text-[10px] font-bold uppercase tracking-widest text-emerald-600 mb-4 px-2 flex items-center gap-2">
+              <ShieldCheck className="w-3 h-3" />
+              <span>System Admin</span>
+            </h3>
+            {[
+              { name: 'System Users', icon: Users },
+              { name: 'Global Entities', icon: Box },
+              { name: 'Global Calls', icon: PhoneCall },
+              { name: 'Global Analytics', icon: BarChart2 },
+              { name: 'Global Leads', icon: Users },
+            ].map((item) => (
+              <button
+                key={item.name}
+                onClick={() => setActiveTab(item.name)}
+                className={`w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm transition-colors ${
+                  activeTab === item.name ? 'bg-emerald-50 text-emerald-700 shadow-sm' : 'text-secondary hover:text-emerald-600 hover:bg-emerald-50/50'
+                }`}
+              >
+                <item.icon className={`w-4 h-4 ${activeTab === item.name ? 'text-emerald-600' : ''}`} />
+                <span>{item.name}</span>
+              </button>
+            ))}
+          </div>
+        )}
       </div>
       
       <div className="p-6 border-t border-border space-y-4">
@@ -98,21 +135,34 @@ const Sidebar: React.FC<SidebarProps> = ({
           <Settings className="w-4 h-4" />
           <span>Settings</span>
         </button>
+        {user?.role === 'admin' && (
+          <Link 
+            href="/admin"
+            className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm text-secondary hover:text-black hover:bg-accent transition-colors"
+          >
+            <ShieldCheck className="w-4 h-4 text-emerald-600" />
+            <span className="font-bold uppercase tracking-wider text-[10px]">Admin Portal</span>
+          </Link>
+        )}
         <button 
           className="w-full flex items-center gap-3 px-3 py-2 rounded-md text-sm text-secondary hover:text-rose-600 hover:bg-rose-50 transition-colors"
-          onClick={() => window.location.href = '/login'}
+          onClick={() => {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/login';
+          }}
         >
           <LogOut className="w-4 h-4" />
           <span>Logout</span>
         </button>
 
         <div className="flex items-center gap-3 pt-4 border-t border-border/50">
-          <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center text-[10px] font-bold border border-border">
-            AD
+          <div className="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center text-[10px] font-bold border border-border">
+            {user?.name?.substring(0, 2).toUpperCase() || 'AI'}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-semibold truncate">Admin User</p>
-            <p className="text-[10px] text-secondary">Pro Plan</p>
+            <p className="text-xs font-semibold truncate">{user?.name || 'Guest User'}</p>
+            <p className="text-[10px] text-secondary capitalize">{user?.accountType || 'Trial'} Plan</p>
           </div>
         </div>
       </div>

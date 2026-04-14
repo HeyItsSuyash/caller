@@ -1,23 +1,38 @@
 import React, { useState, useEffect } from 'react';
 import { Upload, FileText, Plus, Search, BookOpen, X, Trash2, Loader2 } from 'lucide-react';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://caller-24ie.onrender.com';
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 
-const TabDataRoom = () => {
+interface TabDataRoomProps {
+  activeEntity: string;
+}
+
+const TabDataRoom: React.FC<TabDataRoomProps> = ({ activeEntity }) => {
   const [sources, setSources] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [newTitle, setNewTitle] = useState('');
   const [newContent, setNewContent] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const fetchSources = async () => {
+    setIsLoading(true);
+    setErrorMessage('');
     try {
-      const response = await fetch(`${BACKEND_URL}/knowledge`);
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
+      
+      const response = await fetch(`${BACKEND_URL}/knowledge?entity=${encodeURIComponent(activeEntity)}`, {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      
       const data = await response.json();
       setSources(data);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching sources:', err);
+      setErrorMessage(err.name === 'AbortError' ? 'Fetch timed out' : 'Failed to load knowledge base');
     } finally {
       setIsLoading(false);
     }
@@ -25,27 +40,41 @@ const TabDataRoom = () => {
 
   useEffect(() => {
     fetchSources();
-  }, []);
+  }, [activeEntity]);
 
   const handleAddTextBlock = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTitle || !newContent) return;
     
     setIsSubmitting(true);
+    setErrorMessage('');
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 10000);
+
       const response = await fetch(`${BACKEND_URL}/knowledge/text`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: newTitle, content: newContent })
+        signal: controller.signal,
+        body: JSON.stringify({ 
+          title: newTitle, 
+          content: newContent,
+          entity: activeEntity
+        })
       });
+      clearTimeout(timeoutId);
+
       if (response.ok) {
         setNewTitle('');
         setNewContent('');
         setIsModalOpen(false);
         fetchSources();
+      } else {
+        setErrorMessage('Server error while saving knowledge');
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error adding text block:', err);
+      setErrorMessage(err.name === 'AbortError' ? 'Save timed out. Backend might be slow.' : 'Failed to save knowledge');
     } finally {
       setIsSubmitting(false);
     }
@@ -151,13 +180,19 @@ const TabDataRoom = () => {
                 <button className="p-2 hover:bg-accent rounded-lg text-secondary"><FileText className="w-5 h-5" /></button>
               </div>
               <p className="text-lg font-medium leading-relaxed text-secondary italic">
-                Active context for the voice agent. These blocks are used to ground the LLM's responses.
+                Active context for <span className="text-black underline">{activeEntity}</span>. These blocks are used to ground the LLM's responses.
               </p>
             </section>
 
             <div className="h-[1px] w-full bg-gradient-to-r from-transparent via-border to-transparent" />
 
             <section className="space-y-8">
+              {errorMessage && (
+                <div className="p-4 bg-rose-50 border border-rose-100 rounded-2xl text-rose-600 text-xs font-semibold flex items-center justify-between">
+                  <span>{errorMessage}</span>
+                  <button onClick={() => setErrorMessage('')} className="p-1 hover:bg-rose-100 rounded-full">×</button>
+                </div>
+              )}
               <div className="flex items-center gap-3">
                  <BookOpen className="w-5 h-5 text-secondary" />
                  <h2 className="text-xs font-black uppercase tracking-[0.2em] text-secondary">Core Concepts & Fragments</h2>

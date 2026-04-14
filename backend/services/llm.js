@@ -39,16 +39,53 @@ Respond with a JSON object in this exact structure:
 }
 `;
 
-async function getLLMResponse(historyTurns, newTranscript, memory = []) {
-  let dynamicSystemPrompt = SYSTEM_PROMPT;
+async function getLLMResponse(historyTurns, newTranscript, memory = [], knowledge = [], instructions = '') {
+  let contextSection = "";
+  let groundingMessages = [];
   
-  if (memory && memory.length > 0) {
-    const memoryString = memory.map(m => `- [${m.timestamp}] ${m.text} (Intent: ${m.intent})`).join('\n');
-    dynamicSystemPrompt += `\n\nPREVIOUS INTERACTION MEMORY:\nThis user has called before. Here are the summaries of previous conversations:\n${memoryString}\n\nUse this memory to provide a personalized experience. For example, if they previously asked about a topic, you can say: "Haan, humne pichli baar is baare mein baat ki thi..." or "Aapne pehle admission ke baare mein pucha tha..."`;
+  if (instructions) {
+    contextSection += `### CORE AGENT INSTRUCTIONS ###\n${instructions}\n##############################\n\n`;
+  }
+  
+  if (knowledge && knowledge.length > 0) {
+    const knowledgeString = knowledge.map(k => `[${k.title}] ${k.content}`).join('\n\n');
+    contextSection += `### MANDATORY DATA ROOM KNOWLEDGE ###
+The following facts are the ABSOLUTE SOURCE OF TRUTH for this call. 
+If these facts contradict your general knowledge or previous summaries, the DATA ROOM IS CORRECT.
+
+DATA ROOM CONTENT:
+${knowledgeString}
+
+STRICT OPERATIONAL RULES:
+1. **NO REDIRECTION**: If an answer (e.g., fee amounts, dates, specific names) is in the DATA ROOM, you MUST provide it directly. Never tell the user to "check the website", "consult a human", or "I don't have that info".
+2. **ACTIVE CORRECTION**: If you previously said you didn't have information, but it is now in the DATA ROOM, say: "Wait, I just checked my updated records. The [Information] is [Fact]."
+3. **MMMUT CONTEXT**: If the data room mentions MMMUT, you are an Admission Bot specifically for MMMUT (Madan Mohan Malaviya University of Technology).
+#######################################\n\n`;
+
+    // NUCLEAR OPTION: Inject knowledge as a grounding turn in conversation history
+    groundingMessages.push({ 
+        role: "user", 
+        content: `System Note: For this call, use the following verified company context: ${knowledgeString.substring(0, 1000)}` 
+    });
+    groundingMessages.push({ 
+        role: "assistant", 
+        content: "Understood. I have access to these verified facts now. I will provide direct answers on fees, packages, and other details from this data and will not redirect the caller to websites or humans for these specific items." 
+    });
+  } else {
+    contextSection += `### (Notice: No specific company context found for this call session.) ###\n\n`;
   }
 
+  if (memory && memory.length > 0) {
+    const memoryString = memory.map(m => `- [${m.timestamp}] ${m.text} (Intent: ${m.intent})`).join('\n');
+    contextSection += `### PREVIOUS INTERACTION MEMORY ###\nHistory of past calls with this user:\n${memoryString}\n\nNOTE: If the current DATA ROOM knowledge contradicts this history, strictly use the DATA ROOM facts.\n#######################################\n\n`;
+  }
+
+  const dynamicSystemPrompt = contextSection + SYSTEM_PROMPT.replace('Company Name', 'the organization');
+
+  // Build the message payload starting with Grounding Turn if available
   const messages = [
-    { role: "system", content: dynamicSystemPrompt }
+    { role: "system", content: dynamicSystemPrompt },
+    ...groundingMessages
   ];
 
   const recentTurns = historyTurns.slice(-10);
@@ -62,12 +99,18 @@ async function getLLMResponse(historyTurns, newTranscript, memory = []) {
 
   messages.push({ role: 'user', content: newTranscript });
 
+  // ENHANCED LOGGING
+  console.log(`\n[LLM] NUCLEAR PROMPT READY (Knowledge: ${knowledge.length} fragments)`);
+  if (knowledge.length > 0) {
+    console.log(`[LLM] Grounding turn injected into chat history.`);
+  }
+
   try {
     const completion = await groq.chat.completions.create({
       messages,
       model: "llama-3.3-70b-versatile",
       response_format: { type: "json_object" },
-      temperature: 0.5,
+      temperature: 0.3, // Further reduced for maximum factual lock-in
       max_completion_tokens: 300
     });
 

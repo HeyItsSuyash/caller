@@ -1,7 +1,9 @@
 const { getCallSession, addTurn, createCallSession, updateCallSession } = require('../state/calls');
 const { getGroqSTT, getGoogleTTS } = require('../services/speech');
 const { getLLMResponse, summarizeCall } = require('../services/llm');
-const { getCallMemory, saveCallSummary } = require('../services/mongodb');
+const { getCallMemory, saveCall, getKnowledge } = require('../services/mongodb');
+const entityService = require('../services/entity');
+const leadService = require('../services/lead');
 const { spawn } = require('child_process');
 
 // Twilio → CALLER AI: raw mulaw 8kHz chunks → PCM WAV 16kHz Buffer
@@ -65,7 +67,17 @@ function handleStreamConnection(ws) {
   let isAIProcessing = false;
   let silenceTimer = null;
   const SILENCE_THRESHOLD_MS = 800; // Trigger STT after 0.8s of no audio for near real-time response
-  
+  let safetyUnlockTimeout = null;
+
+  const resetAIState = (reason = '') => {
+    if (reason) console.log(`[Stream] Resetting AI state: ${reason}`);
+    isAIProcessing = false;
+    audioBuffer = [];
+    if (safetyUnlockTimeout) {
+      clearTimeout(safetyUnlockTimeout);
+      safetyUnlockTimeout = null;
+    }
+  };
   ws.on('message', async (message) => {
     const msg = JSON.parse(message);
     
@@ -83,12 +95,36 @@ function handleStreamConnection(ws) {
       // FETCH MEMORY from MongoDB
       if (session.phoneNumber && session.phoneNumber !== 'unknown') {
         console.log(`[MongoDB] Fetching previous summaries for ${session.phoneNumber}...`);
-        getCallMemory(session.phoneNumber).then(memory => {
+        try {
+          const memory = await getCallMemory(session.phoneNumber);
           if (memory && memory.length > 0) {
             console.log(`[MongoDB] Found ${memory.length} previous interactions for ${session.phoneNumber}`);
             updateCallSession(callSid, { memory });
           }
-        });
+        } catch (err) {
+          console.error(`[MongoDB] Error fetching memory:`, err.message);
+        }
+      }
+
+      // FETCH KNOWLEDGE & INSTRUCTIONS from MongoDB
+      console.log(`[MongoDB] Fetching profile for entity: ${session.entity || 'unknown'}...`);
+      try {
+        const entityProfile = await entityService.getEntityByName(session.entity);
+        if (entityProfile) {
+          console.log(`[MongoDB] Loaded profile for ${entityProfile.name}. Instructions length: ${entityProfile.instructions?.length || 0}`);
+          updateCallSession(callSid, { 
+            entity_id: entityProfile._id,
+            instructions: entityProfile.instructions || '' 
+          });
+        }
+
+        const knowledge = await getKnowledge(session.entity);
+        if (knowledge && knowledge.length > 0) {
+          console.log(`[MongoDB] Found ${knowledge.length} knowledge fragments for ${session.entity || 'unknown'}`);
+          updateCallSession(callSid, { knowledge });
+        }
+      } catch (err) {
+        console.error(`[MongoDB] Error fetching entity data:`, err.message);
       }
 
     } else if (msg.event === 'media') {
@@ -121,8 +157,7 @@ function handleStreamConnection(ws) {
       
     } else if (msg.event === 'mark') {
       console.log(`[${callSid}] AI finished speaking, unlocking audio capture`);
-      isAIProcessing = false;
-      audioBuffer = []; // Clear any residual noise buffer
+      resetAIState('mark event');
     } else if (msg.event === 'stop') {
       console.log(`Stream stopped: ${streamSid}`);
       if (global.broadcastEvent) {
@@ -138,6 +173,11 @@ function handleStreamConnection(ws) {
     isAIProcessing = true;
     const currentAudio = [...audioBuffer];
     audioBuffer = []; // Clear for next utterance
+
+    // Safety timeout: if AI doesn't finish in 12s, unlock
+    safetyUnlockTimeout = setTimeout(() => {
+        resetAIState('Safety timeout reached (12s)');
+    }, 12000);
     
     try {
       // 1. Decode & Resample asynchronously
@@ -149,7 +189,7 @@ function handleStreamConnection(ws) {
       const sttResult = await getGroqSTT(pcm16Wav);
       
       if (!sttResult || !sttResult.transcript || sttResult.transcript.trim() === '') {
-        isAIProcessing = false;
+        resetAIState('Empty STT result');
         return;
       }
       
@@ -176,7 +216,13 @@ function handleStreamConnection(ws) {
       // 3. LLM (CALLER AI)
       console.log(`\n--- [${callSid}] LLM PROCESSING ---`);
       console.log(`[${callSid}] Querying CALLER AI LLM...`);
-      const aiResponse = await getLLMResponse(session.turns, sttResult.transcript, session.memory || []);
+      const aiResponse = await getLLMResponse(
+        session.turns, 
+        sttResult.transcript, 
+        session.memory || [],
+        session.knowledge || [],
+        session.instructions || ''
+      );
       console.log(`[${callSid}] LLM Answer Object:`, JSON.stringify(aiResponse, null, 2));
       console.log(`[${callSid}] AI will say: "${aiResponse.spoken}" (Language: ${aiResponse.language})`);
       
@@ -228,12 +274,12 @@ function handleStreamConnection(ws) {
           mark: { name: 'ai_done' }
         }));
       } else {
-         isAIProcessing = false; // no audio returned
+         resetAIState('TTS result empty');
       }
 
     } catch (e) {
       console.error(`[${callSid}] Error in audio pipeline:`, e);
-      isAIProcessing = false;
+      resetAIState('Catch block error');
     }
   }
 }
@@ -260,18 +306,36 @@ async function processPostCallSummary(callSid) {
     });
     console.log(`[${callSid}] Summary generated: "${summary.summary.substring(0, 50)}..."`);
     
-    // SAVE TO MongoDB
-    if (session.phoneNumber && session.phoneNumber !== 'unknown') {
-      console.log(`[MongoDB] Attempting to save summary for ${session.phoneNumber}...`);
-      try {
-        await saveCallSummary(session.phoneNumber, summary);
-        console.log(`[MongoDB] Summary saved successfully for ${session.phoneNumber}`);
-      } catch (err) {
-        console.error(`[MongoDB] FATAL Error saving summary for ${session.phoneNumber}:`, err.message);
-        if (err.details) console.error(`[MongoDB] Error Details:`, err.details);
+    // SAVE TO MongoDB (New Calls Collection)
+    const callData = {
+      phone: session.phoneNumber,
+      entity_id: session.entity_id,
+      transcript: session.turns,
+      summary: summary.summary,
+      intent: summary.key_intent,
+      resolution: summary.resolution,
+      meta: summary.important_details
+    };
+
+    console.log(`[MongoDB] Attempting to save call record for ${session.phoneNumber}...`);
+    try {
+      await saveCall(callData);
+      console.log(`[MongoDB] Call record saved successfully.`);
+
+      // 3. AUTO-LEAD GENERATION
+      const positiveIntents = ['interest', 'admission', 'sales', 'positive', 'high_interest'];
+      if (positiveIntents.includes(summary.key_intent?.toLowerCase()) || summary.resolution === 'resolved') {
+        console.log(`[LeadService] High interest detected. Generating lead...`);
+        await leadService.createLead({
+          phone: session.phoneNumber,
+          name: 'Anonymous Caller', // Would ideally extract from transcript entities
+          interest: summary.key_intent,
+          entity_id: session.entity_id,
+          meta: summary.important_details
+        });
       }
-    } else {
-      console.warn(`[MongoDB] Cannot save summary: Phone number is "${session.phoneNumber}". Ensure outbound call initialized it.`);
+    } catch (err) {
+      console.error(`[MongoDB] Error in post-call data flow:`, err.message);
     }
   } else {
     console.error(`[${callSid}] Failed to generate summary from LLM.`);

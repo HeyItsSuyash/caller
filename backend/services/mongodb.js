@@ -1,4 +1,4 @@
-const { MongoClient } = require('mongodb');
+const { MongoClient, ObjectId } = require('mongodb');
 
 const uri = process.env.MONGODB_URI;
 const dbName = process.env.MONGODB_DB_NAME || 'caller_ai';
@@ -18,28 +18,79 @@ if (uri) {
 
 let db;
 
-async function connect() {
-  if (!uri || !client) {
-    return null; 
-  }
-  if (db) return db;
+let isConnecting = false;
 
+async function connect() {
+  if (!uri || !client) return null;
+  if (db) return db;
+  if (isConnecting) {
+      // Wait a bit if already connecting to avoid multiple parallel attempts
+      await new Promise(resolve => setTimeout(resolve, 500));
+      if (db) return db;
+  }
+
+  isConnecting = true;
   try {
-    // Attempt connection
-    await client.connect();
+    console.log('[MongoDB] Attempting to connect...');
+    // We use a timeout because sometimes client.connect() hangs indefinitely on Windows/certain networks
+    const connectPromise = client.connect();
+    const timeoutPromise = new Promise((_, reject) => 
+      setTimeout(() => reject(new Error('Connection timed out')), 5000)
+    );
+    
+    await Promise.race([connectPromise, timeoutPromise]);
     db = client.db(dbName);
     console.log(`[MongoDB] Connected successfully to database: ${dbName}`);
-    
-    // Create index in background without awaiting to prevent startup hang
-    db.collection('analytics').createIndex({ phone_number: 1 }, { unique: true }).catch(e => {
-        console.warn('[MongoDB] Index creation failed:', e.message);
-    });
-    
     return db;
   } catch (err) {
-    console.error('[MongoDB] Connection error:', err.message);
-    // Return null so that service functions can fallback gracefully
+    console.error(`[MongoDB] Connection error:`, err.message);
     return null;
+  } finally {
+    isConnecting = false;
+  }
+}
+
+/**
+ * Save a complete call record to the database.
+ */
+async function saveCall(callData) {
+  try {
+    const database = await connect();
+    if (!database) return null;
+
+    const record = {
+      ...callData,
+      createdAt: new Date(),
+      entity_id: callData.entity_id ? new ObjectId(callData.entity_id) : null
+    };
+
+    const result = await database.collection('calls').insertOne(record);
+    
+    // Also update the legacy analytics collection for backward compatibility
+    await saveCallSummary(callData.phone, callData);
+
+    return { ...record, _id: result.insertedId };
+  } catch (err) {
+    console.error('[MongoDB] Error saving call:', err.message);
+    return null;
+  }
+}
+
+/**
+ * Fetch calls for a specific entity with basic analytics.
+ */
+async function getEntityCalls(entityId) {
+  try {
+    const database = await connect();
+    if (!database) return [];
+
+    return await database.collection('calls')
+      .find({ entity_id: new ObjectId(entityId) })
+      .sort({ createdAt: -1 })
+      .toArray();
+  } catch (err) {
+    console.error('[MongoDB] Error fetching entity calls:', err.message);
+    return [];
   }
 }
 
@@ -51,8 +102,23 @@ async function getCallMemory(phoneNumber) {
     const database = await connect();
     if (!database) return [];
     
-    const result = await database.collection('analytics').findOne({ phone_number: phoneNumber });
+    // Search in the new calls collection first
+    const calls = await database.collection('calls')
+      .find({ phone: phoneNumber })
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .toArray();
     
+    if (calls.length > 0) {
+      return calls.map(c => ({
+        text: c.summary,
+        timestamp: c.createdAt,
+        intent: c.intent
+      }));
+    }
+
+    // Fallback to legacy analytics
+    const result = await database.collection('analytics').findOne({ phone_number: phoneNumber });
     if (!result) return [];
     return result.summaries || [];
   } catch (err) {
@@ -62,29 +128,23 @@ async function getCallMemory(phoneNumber) {
 }
 
 /**
- * Add a new summary to the phone number's history.
+ * Add a new summary to the phone number's history (Legacy support).
  */
 async function saveCallSummary(phoneNumber, summaryData) {
   try {
     const database = await connect();
-    if (!database) {
-        console.warn('[MongoDB] Skipping save: No connection.');
-        return;
-    }
+    if (!database) return;
     
-    // 1. Fetch existing summaries
     const existing = await database.collection('analytics').findOne({ phone_number: phoneNumber });
     let updatedSummaries = existing ? (existing.summaries || []) : [];
 
-    // 2. Append new summary
     updatedSummaries.unshift({
       text: summaryData.summary,
       timestamp: new Date().toISOString(),
-      intent: summaryData.key_intent || summaryData.key_topics?.[0] || 'unknown',
-      details: summaryData.important_details || summaryData.entities || {}
+      intent: summaryData.intent || summaryData.key_intent || 'unknown',
+      details: summaryData.important_details || {}
     });
 
-    // 3. Upsert
     await database.collection('analytics').updateOne(
       { phone_number: phoneNumber },
       { 
@@ -95,27 +155,23 @@ async function saveCallSummary(phoneNumber, summaryData) {
       },
       { upsert: true }
     );
-
-    console.log(`[MongoDB] Upsert completed for ${phoneNumber}`);
   } catch (err) {
     console.error(`[MongoDB] Error saving summary for ${phoneNumber}:`, err.message);
   }
 }
 
 /**
- * Fetch all analytics data for the dashboard.
+ * Fetch all analytics data for the dashboard (Global Admin).
  */
 async function getAllAnalytics() {
   try {
     const database = await connect();
     if (!database) return [];
     
-    const results = await database.collection('analytics')
+    return await database.collection('calls')
       .find({})
-      .sort({ updated_at: -1 })
+      .sort({ createdAt: -1 })
       .toArray();
-      
-    return results;
   } catch (err) {
     console.error('[MongoDB] Error fetching all analytics:', err.message);
     return [];
@@ -125,13 +181,23 @@ async function getAllAnalytics() {
 /**
  * Fetch all knowledge source documents/text blocks.
  */
-async function getKnowledge() {
+async function getKnowledge(entity) {
   try {
     const database = await connect();
     if (!database) return [];
     
+    const query = (entity && entity !== 'unknown')
+      ? { entity: { $regex: new RegExp(`^${entity}$`, 'i') } }
+      : { 
+          $or: [
+            { entity: { $exists: false } },
+            { entity: null },
+            { entity: "" }
+          ] 
+        };
+    
     return await database.collection('knowledge')
-      .find({})
+      .find(query)
       .sort({ created_at: -1 })
       .toArray();
   } catch (err) {
@@ -179,6 +245,11 @@ async function deleteKnowledge(id) {
 }
 
 module.exports = {
+  connect,
+  getDb: () => db,
+  closeConnection: () => client && client.close(),
+  saveCall,
+  getEntityCalls,
   getCallMemory,
   saveCallSummary,
   getAllAnalytics,

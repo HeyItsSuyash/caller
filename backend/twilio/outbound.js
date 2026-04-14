@@ -2,7 +2,7 @@ const twilio = require('twilio');
 const { createCallSession } = require('../state/calls');
 
 async function initiateOutboundCall(req, res) {
-  const { to } = req.body;
+  const { to, entity } = req.body;
   
   if (!to) {
     return res.status(400).json({ error: 'Missing phone number (to)' });
@@ -26,8 +26,8 @@ async function initiateOutboundCall(req, res) {
       from: from,
     });
 
-    // Initialize session with phone number
-    createCallSession(call.sid, to);
+    // Initialize session with phone number and entity
+    createCallSession(call.sid, to, entity || 'unknown');
 
     res.json({ success: true, callSid: call.sid });
   } catch (err) {

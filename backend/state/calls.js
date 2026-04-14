@@ -1,9 +1,10 @@
 const calls = new Map();
 
-function createCallSession(callSid, phoneNumber = 'unknown') {
+function createCallSession(callSid, phoneNumber = 'unknown', entity = 'unknown') {
   const session = {
     callSid,
     phoneNumber,
+    entity,
     startTime: new Date().toISOString(),
     language_distribution: { hindi: 0, english: 0, hinglish: 0 },
     turns: [],

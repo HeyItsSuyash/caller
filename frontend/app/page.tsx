@@ -1,61 +1,138 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import Sidebar from '../components/Sidebar';
 import MainWorkspace from '../components/MainWorkspace';
 import EntityModal from '../components/EntityModal';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'https://caller-24ie.onrender.com';
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:3001';
 
 export default function Home() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState('Calls');
-  const [activeEntity, setActiveEntity] = useState('Admission Bot');
+  const [activeEntity, setActiveEntity] = useState('');
   const [callStatus, setCallStatus] = useState<'idle' | 'calling' | 'connected' | 'error'>('idle');
   const [transcripts, setTranscripts] = useState<any[]>([]);
   const [analyticsData, setAnalyticsData] = useState<any[]>([]);
   const [errorMsg, setErrorMsg] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
+  const [targetUser, setTargetUser] = useState<any>(null);
+  const [entities, setEntities] = useState<any[]>([]);
 
-  const entities = ['Admission Bot', 'Support Bot', 'Sales Bot'];
+  // const entities = ['Admission Bot', 'Support Bot', 'Sales Bot'];
 
   useEffect(() => {
+    const token = localStorage.getItem('token');
+    const storedUser = localStorage.getItem('user');
+    
+    if (!token) {
+      router.push('/login');
+      return;
+    }
+
+    if (storedUser) {
+      setUser(JSON.parse(storedUser));
+    }
+
+    // Context-aware Entity Fetcher
+    const fetchEntities = async () => {
+      try {
+        const userIdQuery = targetUser ? `?userId=${targetUser._id}` : '';
+        const response = await fetch(`${BACKEND_URL}/entities${userIdQuery}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const data = await response.json();
+        if (response.ok) {
+          setEntities(data);
+          if (data.length > 0 && !activeEntity) {
+            setActiveEntity(data[0].name);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching entities:', err);
+      }
+    };
+    fetchEntities();
+
     // 1. Fetch Initial Analytics
     const fetchAnalytics = async () => {
       try {
-        const response = await fetch(`${BACKEND_URL}/analytics`);
+        const userIdQuery = targetUser ? `?userId=${targetUser._id}` : '';
+        // If impersonating, fetch specific; if global admin, fetch global
+        const endpoint = targetUser ? `/analytics` : '/analytics';
+        const response = await fetch(`${BACKEND_URL}${endpoint}${userIdQuery}`, {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
         const data = await response.json();
-        setAnalyticsData(data);
+        setAnalyticsData(Array.isArray(data) ? data : [data]);
       } catch (err) {
         console.error('Error fetching analytics:', err);
       }
     };
     fetchAnalytics();
 
-    // 2. Build the live WebSocket URL
+    // 2. Build the live WebSocket URL & Handle Reconnection
     const wsUrl = BACKEND_URL.replace(/^http/, 'ws') + '/live';
-    const ws = new WebSocket(wsUrl);
+    let socket: WebSocket | null = null;
+    let reconnectTimeout: NodeJS.Timeout;
 
-    ws.onopen = () => console.log('Connected to live transcript stream');
-    ws.onmessage = (event) => {
-      try {
-        const payload = JSON.parse(event.data);
-        if (payload.event === 'transcript') {
-          setTranscripts(prev => [...prev.slice(-15), payload.data]);
-        } else if (payload.event === 'call_ended') {
-          console.log('Call ended notification received');
-          setCallStatus('idle');
-          fetchAnalytics(); // Refresh history/analytics when call ends
+    const connectWS = () => {
+      console.log(`[WebSocket] Connecting to: ${wsUrl}...`);
+      socket = new WebSocket(wsUrl);
+
+      socket.onopen = () => {
+        console.log('[WebSocket] Connected to live transcript stream');
+      };
+
+      socket.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data);
+          if (payload.event === 'transcript') {
+            setTranscripts(prev => [...prev.slice(-15), payload.data]);
+          } else if (payload.event === 'call_ended') {
+            console.log('[WebSocket] Call ended notification received');
+            setCallStatus('idle');
+            fetchAnalytics();
+          }
+        } catch (err) {
+          console.error('[WebSocket] Message processing error:', err);
         }
-      } catch (err) {
-        console.error('WebSocket message error:', err);
-      }
+      };
+
+      socket.onerror = (err) => {
+        console.error('[WebSocket] Connection error. Detailed event:', err);
+      };
+
+      socket.onclose = (event) => {
+        console.warn(`[WebSocket] Disconnected (Code: ${event.code}). Retrying in 3s...`);
+        // Retry logic: Reconnect after 3 seconds
+        reconnectTimeout = setTimeout(connectWS, 3000);
+      };
     };
 
-    ws.onerror = (err) => console.error('WebSocket Error:', err);
-    ws.onclose = () => console.log('Disconnected from live stream');
+    connectWS();
 
-    return () => ws.close();
-  }, []);
+    return () => {
+      if (socket) socket.close();
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+    };
+  }, [targetUser, router]);
+
+  const handleImpersonate = (u: any) => {
+    setTargetUser(u);
+    setActiveTab('Dashboard');
+    setActiveEntity('');
+  };
+
+  const stopImpersonating = () => {
+    setTargetUser(null);
+    setActiveTab('Dashboard');
+    setActiveEntity('');
+  };
 
   const handleCall = async (number: string) => {
     setCallStatus('calling');
@@ -70,7 +147,10 @@ export default function Home() {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        body: JSON.stringify({ to: number })
+        body: JSON.stringify({ 
+          to: number,
+          entity: activeEntity 
+        })
       });
 
       const data = await response.json();
@@ -88,26 +168,54 @@ export default function Home() {
   };
 
   return (
-    <div className="flex bg-white h-screen w-full overflow-hidden">
-      <Sidebar 
-        activeTab={activeTab} 
-        setActiveTab={setActiveTab} 
-        entities={entities}
-        activeEntity={activeEntity}
-        setActiveEntity={setActiveEntity}
-        onNewEntity={handleNewEntity}
-      />
-      <MainWorkspace 
-        activeTab={activeTab}
-        setActiveTab={setActiveTab}
-        activeEntity={activeEntity}
-        transcripts={transcripts}
-        callStatus={callStatus}
-        onCall={handleCall}
-        analyticsData={analyticsData}
-      />
+    <div className="flex flex-col h-screen w-full overflow-hidden bg-white">
+      {/* Admin Impersonation Banner */}
+      {targetUser && (
+        <div className="bg-emerald-600 px-4 py-1.5 flex items-center justify-between text-white text-[11px] font-bold uppercase tracking-widest z-50">
+          <div className="flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+            <span>Viewing Workspace as: {targetUser.name} ({targetUser.email})</span>
+          </div>
+          <button 
+            onClick={stopImpersonating}
+            className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded backdrop-blur-sm transition-colors"
+          >
+            Exit Admin Mode
+          </button>
+        </div>
+      )}
 
-      <EntityModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <div className="flex flex-1 overflow-hidden">
+        <Sidebar 
+          activeTab={activeTab} 
+          setActiveTab={setActiveTab} 
+          entities={entities}
+          activeEntity={activeEntity}
+          setActiveEntity={setActiveEntity}
+          onNewEntity={handleNewEntity}
+          user={user}
+        />
+        <MainWorkspace 
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          activeEntity={activeEntity}
+          transcripts={transcripts}
+          callStatus={callStatus}
+          onCall={handleCall}
+          analyticsData={analyticsData}
+          onImpersonate={handleImpersonate}
+        />
+      </div>
+
+      <EntityModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        onCreated={(newEntity) => {
+          setEntities(prev => [...prev, newEntity]);
+          setActiveEntity(newEntity.name);
+          setIsModalOpen(false);
+        }}
+      />
       
       {/* Absolute Error Notification */}
       {errorMsg && (
