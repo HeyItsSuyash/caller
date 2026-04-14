@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 import AdminTable from '../../components/AdminTable';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:3001';
 
 export default function AdminDashboard() {
   const router = useRouter();

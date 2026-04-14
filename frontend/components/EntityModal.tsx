@@ -7,7 +7,7 @@ interface EntityModalProps {
   onCreated: (entity: any) => void;
 }
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:3001';
 
 const EntityModal: React.FC<EntityModalProps> = ({ isOpen, onClose, onCreated }) => {
   const [name, setName] = useState('');
