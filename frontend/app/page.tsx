@@ -75,10 +75,9 @@ export default function Home() {
     };
     fetchAnalytics();
 
-    // 2. Build the live WebSocket URL & Handle Reconnection
-    // 2. Build the live WebSocket URL with Protocol Detection
+    // 2. Build the live WebSocket URL with Protocol Detection & Trailing Slash Safety
     const protocol = BACKEND_URL.startsWith('https') ? 'wss' : 'ws';
-    const cleanUrl = BACKEND_URL.replace(/^https?:\/\//, '');
+    const cleanUrl = BACKEND_URL.replace(/^https?:\/\//, '').replace(/\/$/, '');
     const wsUrl = `${protocol}://${cleanUrl}/live`;
     let socket: WebSocket | null = null;
     let reconnectTimeout: NodeJS.Timeout;

@@ -106,25 +106,6 @@ const wss = new WebSocket.Server({ server });
 // Array to hold connected frontend clients
 const frontendClients = new Set();
 
-// WebSocket connection handler
-wss.on("connection", (ws, req) => {
-  const url = new URL(req.url, `http://${req.headers.host}`);
-  const path = url.pathname;
-  
-  console.log(`[WebSocket] Connection request path: ${path} | Origin: ${req.headers.origin}`);
-  
-  if (path.startsWith("/twilio/stream")) {
-    handleStreamConnection(ws);
-  } else if (path.startsWith("/live")) {
-    console.log("[WebSocket] Frontend dashboard connected for updates");
-    frontendClients.add(ws);
-    ws.on("close", () => frontendClients.delete(ws));
-  } else {
-    console.log(`[WebSocket] Dropping unknown connection path: ${path}`);
-    ws.close();
-  }
-});
-
 // A simple helper to broadcast events to all frontend clients
 function broadcastEvent(event, data) {
   const message = JSON.stringify({ event, data });
@@ -138,6 +119,30 @@ function broadcastEvent(event, data) {
 
 // Attach broadcast helper to global so stream.js can use it easily without circular deps
 global.broadcastEvent = broadcastEvent;
+
+// WebSocket connection handler
+wss.on("connection", (ws, req) => {
+  // Robust path detection: remove query params and double slashes
+  const rawPath = (req.url || "").split('?')[0];
+  const path = rawPath.replace(/\/+/g, '/');
+  
+  console.log(`[WebSocket] Connection request path: ${path} (raw: ${rawPath}) | Origin: ${req.headers.origin}`);
+  
+  if (path === "/twilio/stream" || path.startsWith("/twilio/stream/")) {
+    handleStreamConnection(ws);
+  } else if (path === "/live" || path === "/live/") {
+    console.log("[WebSocket] Frontend dashboard connected for updates");
+    frontendClients.add(ws);
+    ws.on("close", () => frontendClients.delete(ws));
+  } else {
+    console.log(`[WebSocket] Dropping unknown connection path: ${path}`);
+    ws.close();
+  }
+});
+
+
+// Attachment moved to earlier in file for availability during connection handshake
+// global.broadcastEvent = broadcastEvent;
 
 // FINAL CATCH-ALL: Ensure any unhandled routes return JSON 404, not HTML
 app.use((req, res) => {
