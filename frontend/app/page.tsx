@@ -206,6 +206,7 @@ export default function Home() {
           onCall={handleCall}
           analyticsData={analyticsData}
           onImpersonate={handleImpersonate}
+          entities={entities}
         />
       </div>
 

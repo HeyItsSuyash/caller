@@ -13,6 +13,7 @@ const express = require("express");
 const http = require("http");
 const WebSocket = require("ws");
 const cors = require("cors");
+const path = require("path");
 
 const app = express();
 app.use(express.json());
@@ -37,11 +38,24 @@ const authRoutes = require('./routes/auth');
 const entityRoutes = require('./routes/entities');
 const analyticsRoutes = require('./routes/analytics');
 const adminRoutes = require('./routes/admin');
+const widgetRoutes = require('./routes/widget');
 
 app.use("/auth", authRoutes);
 app.use('/entities', entityRoutes);
 app.use('/analytics', analyticsRoutes);
 app.use('/admin', adminRoutes);
+app.use('/api/widget', widgetRoutes);
+
+// Demo Page for Integration Testing
+app.get('/demo', (req, res) => {
+  res.sendFile(path.join(__dirname, '../integration/html/example.html'));
+});
+
+// Serve Widget Static Files
+app.use('/widget', express.static(path.join(__dirname, '../integration/widget')));
+app.get('/widget.js', (req, res) => {
+  res.sendFile(path.join(__dirname, '../integration/widget/widget.js'));
+});
 
 app.get("/health", (req, res) => {
   res.status(200).send("OK");

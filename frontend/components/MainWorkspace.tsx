@@ -7,6 +7,7 @@ import TabLeads from './TabLeads';
 import TabSettings from './TabSettings';
 import TabAdminUsers from './TabAdminUsers';
 import TabAdminGeneral from './TabAdminGeneral';
+import TabIntegrations from './TabIntegrations';
 
 interface MainWorkspaceProps {
   activeTab: string;
@@ -17,6 +18,7 @@ interface MainWorkspaceProps {
   onCall: (number: string) => void;
   analyticsData: any[];
   onImpersonate?: (user: any) => void;
+  entities: any[];
 }
 
 const MainWorkspace: React.FC<MainWorkspaceProps> = ({
@@ -27,9 +29,10 @@ const MainWorkspace: React.FC<MainWorkspaceProps> = ({
   callStatus,
   onCall,
   analyticsData,
-  onImpersonate
+  onImpersonate,
+  entities
 }) => {
-  const tabs = ['Data Room', 'Calls', 'Analytics', 'Leads', 'Settings'];
+  const tabs = ['Data Room', 'Calls', 'Analytics', 'Leads', 'Integrations', 'Settings'];
   const adminTabs = ['System Users', 'Global Entities', 'Global Calls', 'Global Analytics', 'Global Leads'];
   
   const isAdminTab = adminTabs.includes(activeTab);
@@ -96,6 +99,7 @@ const MainWorkspace: React.FC<MainWorkspaceProps> = ({
         {activeTab === 'Calls' && <TabCalls transcripts={transcripts} callStatus={callStatus} onCall={onCall} />}
         {activeTab === 'Analytics' && <TabAnalytics analyticsData={analyticsData} />}
         {activeTab === 'Leads' && <TabLeads />}
+        {activeTab === 'Integrations' && <TabIntegrations activeEntity={activeEntity} entities={entities} />}
         {activeTab === 'Settings' && <TabSettings />}
 
         {/* Admin Tabs */}
