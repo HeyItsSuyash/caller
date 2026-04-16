@@ -6,7 +6,17 @@ import Sidebar from '../components/Sidebar';
 import MainWorkspace from '../components/MainWorkspace';
 import EntityModal from '../components/EntityModal';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:3001';
+const getBackendUrl = () => {
+  if (process.env.NEXT_PUBLIC_BACKEND_URL) return process.env.NEXT_PUBLIC_BACKEND_URL;
+  if (typeof window !== 'undefined') {
+    if (window.location.hostname.includes('caller.work')) {
+      return 'https://caller-24ie.onrender.com';
+    }
+  }
+  return 'http://127.0.0.1:3001';
+};
+
+const BACKEND_URL = getBackendUrl();
 
 export default function Home() {
   const router = useRouter();

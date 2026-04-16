@@ -21,6 +21,8 @@ router.post('/call', async (req, res) => {
       return res.status(404).json({ error: 'Agent not found' });
     }
 
+    const { performOutboundCall } = require('../twilio/service');
+
     if (simulate) {
       console.log(`[WidgetAPI][SIMULATION] Mock call request for agent: ${entity.name} to: ${phoneNumber}`);
       // Artificial delay for realism
@@ -30,37 +32,18 @@ router.post('/call', async (req, res) => {
 
     console.log(`[WidgetAPI] Call request for agent: ${entity.name} to: ${phoneNumber}`);
 
-    // 2. Reuse current outbound logic
-    // We mock the req/res style or call the underlying logic
-    // For isolation, let's call twilio directly or reuse initiateOutboundCall logic
-    // Actually, initiateOutboundCall is an express handler, so we can't easily call it directly
-    // Let's refactor Twilio logic if needed, or just replicate the call for now to keep it isolated
-    
-    const accountSid = process.env.TWILIO_ACCOUNT_SID;
-    const authToken = process.env.TWILIO_AUTH_TOKEN;
-    const from = process.env.TWILIO_PHONE_NUMBER;
-    const serverUrl = process.env.PUBLIC_BASE_URL || process.env.SERVER_URL;
-
-    if (!accountSid || !authToken || !from || !serverUrl) {
-      throw new Error('Twilio configuration missing');
-    }
-
-    const twilio = require('twilio');
-    const { createCallSession } = require('../state/calls');
-    const client = twilio(accountSid, authToken);
-
-    const call = await client.calls.create({
-      url: `${serverUrl}/twilio/voice`,
+    const call = await performOutboundCall({
       to: phoneNumber,
-      from: from,
+      entityName: entity.name
     });
-
-    createCallSession(call.sid, phoneNumber, entity.name);
 
     res.json({ success: true, callSid: call.sid });
   } catch (err) {
-    console.error('[WidgetAPI] Error:', err);
-    res.status(500).json({ error: 'Failed to initiate call', details: err.message });
+    console.error('[WidgetAPI] Error:', err.message);
+    res.status(500).json({ 
+      error: 'Failed to initiate call', 
+      details: err.message 
+    });
   }
 });
 

@@ -12,7 +12,17 @@ const TabIntegrations: React.FC<TabIntegrationsProps> = ({ activeEntity, entitie
 
   const entity = entities.find(e => e.name === activeEntity);
   const entityId = entity?._id || 'ENTITY_ID';
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
+  const getBackendUrl = () => {
+    if (process.env.NEXT_PUBLIC_BACKEND_URL) return process.env.NEXT_PUBLIC_BACKEND_URL;
+    if (typeof window !== 'undefined') {
+      if (window.location.hostname.includes('caller.work')) {
+        return 'https://caller-24ie.onrender.com';
+      }
+    }
+    return 'http://localhost:3001';
+  };
+
+  const backendUrl = getBackendUrl();
 
   // For live preview in the dashboard
   React.useEffect(() => {

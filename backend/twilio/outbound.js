@@ -1,5 +1,4 @@
-const twilio = require('twilio');
-const { createCallSession } = require('../state/calls');
+const { performOutboundCall } = require('./service');
 
 async function initiateOutboundCall(req, res) {
   const { to, entity } = req.body;
@@ -8,31 +7,19 @@ async function initiateOutboundCall(req, res) {
     return res.status(400).json({ error: 'Missing phone number (to)' });
   }
 
-  const accountSid = process.env.TWILIO_ACCOUNT_SID;
-  const authToken = process.env.TWILIO_AUTH_TOKEN;
-  const from = process.env.TWILIO_PHONE_NUMBER;
-  const serverUrl = process.env.PUBLIC_BASE_URL || process.env.SERVER_URL;
-
-  if (!accountSid || !authToken || !from || !serverUrl) {
-    return res.status(500).json({ error: 'Twilio configuration missing in server environment' });
-  }
-
-  const client = twilio(accountSid, authToken);
-
   try {
-    const call = await client.calls.create({
-      url: `${serverUrl}/twilio/voice`,
-      to: to,
-      from: from,
+    const call = await performOutboundCall({ 
+      to, 
+      entityName: entity 
     });
-
-    // Initialize session with phone number and entity
-    createCallSession(call.sid, to, entity || 'unknown');
 
     res.json({ success: true, callSid: call.sid });
   } catch (err) {
-    console.error('Error initiating call:', err);
-    res.status(500).json({ error: 'Failed to initiate call', details: err.message });
+    console.error('[OutboundRoute] Error:', err.message);
+    res.status(500).json({ 
+      error: 'Failed to initiate call', 
+      details: err.message 
+    });
   }
 }
 

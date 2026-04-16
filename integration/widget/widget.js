@@ -3,7 +3,10 @@
     // Try to auto-detect backend URL from script source, fallback to localhost:3001
     const currentScript = document.currentScript;
     const scriptUrl = currentScript ? new URL(currentScript.src) : null;
-    const BACKEND_URL = scriptUrl ? `${scriptUrl.protocol}//${scriptUrl.host}` : 'http://localhost:3001';
+    
+    // Priority: data-backend-url attribute > script src host > fallback
+    const BACKEND_URL = (currentScript && currentScript.getAttribute('data-backend-url')) || 
+                        (scriptUrl ? `${scriptUrl.protocol}//${scriptUrl.host}` : 'https://caller-24ie.onrender.com');
     const CSS_URL = `${BACKEND_URL}/widget/styles.css`;
     
     // 2. Load Styles
