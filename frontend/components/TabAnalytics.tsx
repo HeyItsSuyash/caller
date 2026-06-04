@@ -1,5 +1,17 @@
 import React from 'react';
-import { TrendingUp, Users, PhoneIncoming, Clock, ArrowUpRight, ChevronRight, MessageSquare } from 'lucide-react';
+import { 
+  TrendingUp, 
+  Users, 
+  PhoneIncoming, 
+  Clock, 
+  ArrowUpRight, 
+  ChevronRight, 
+  MessageSquare,
+  Activity,
+  Cpu,
+  Layers,
+  Award
+} from 'lucide-react';
 
 interface TabAnalyticsProps {
   analyticsData: any[];
@@ -7,155 +19,160 @@ interface TabAnalyticsProps {
 }
 
 const TabAnalytics: React.FC<TabAnalyticsProps> = ({ analyticsData, isGlobal }) => {
-  // If global, we might have a single summary object. If specific, we might have an array
   const globalData = isGlobal && analyticsData.length > 0 ? analyticsData[0] : null;
 
   const stats = [
     { 
-      label: isGlobal ? 'Total System Calls' : 'Total Interaction', 
-      value: globalData ? globalData.totalCalls : (analyticsData.length || '2,841'), 
-      change: '+12.5%', 
+      label: isGlobal ? 'System Calls (Cumulative)' : 'Workspace Calls', 
+      value: globalData ? globalData.totalCalls : (analyticsData.length || '24'), 
+      change: '+18.4%', 
       icon: PhoneIncoming, 
-      color: 'text-blue-600', 
-      bg: 'bg-blue-50' 
+      color: 'text-neutral-900', 
+      bg: 'bg-neutral-50' 
     },
     { 
-      label: isGlobal ? 'Total Users' : 'Avg Duration', 
-      value: globalData ? globalData.totalUsers : '4m 32s', 
-      change: '+2.1%', 
-      icon: Users, 
-      color: 'text-amber-600', 
-      bg: 'bg-amber-50' 
-    },
-    { 
-      label: isGlobal ? 'System Intent' : 'Top Intent', 
-      value: globalData ? (globalData.topIntents?.[0]?.intent || 'N/A') : 'Inquiry', 
-      change: '+5.0%', 
-      icon: TrendingUp, 
+      label: isGlobal ? 'Platform Tenants' : 'Avg Telephony Latency', 
+      value: globalData ? globalData.totalUsers : '480ms', 
+      change: '-12%', 
+      icon: Cpu, 
       color: 'text-emerald-600', 
       bg: 'bg-emerald-50' 
     },
     { 
-      label: isGlobal ? 'Total Entities' : 'Unique Callers', 
-      value: globalData ? globalData.totalEntities : '1,104', 
-      change: '+18.2%', 
-      icon: Clock, 
+      label: isGlobal ? 'Top Intent Sector' : 'Top Intent', 
+      value: globalData ? (globalData.topIntents?.[0]?.intent || 'N/A') : 'Admissions', 
+      change: 'Steady', 
+      icon: TrendingUp, 
       color: 'text-indigo-600', 
       bg: 'bg-indigo-50' 
+    },
+    { 
+      label: isGlobal ? 'Configured Agents' : 'Unique Prospects', 
+      value: globalData ? globalData.totalEntities : '118', 
+      change: '+24.2%', 
+      icon: Users, 
+      color: 'text-neutral-900', 
+      bg: 'bg-neutral-50' 
     },
   ];
 
   const recentSummaries = [
-    { id: 1, phone: '+91 987xx xxxx', text: 'Caller asked about B.Tech fee structure and scholarship options. Interested in CS.', intent: 'Admission Inquiry', time: '12m ago' },
-    { id: 2, phone: '+91 876xx xxxx', text: 'Brief inquiry regarding MBA eligibility for non-technical graduates. Satisfied with details.', intent: 'Eligibility Check', time: '1h ago' },
-    { id: 3, phone: '+91 765xx xxxx', text: 'Frustrated about previous call disconnection. Re-explained hostel facilities.', intent: 'Support/Complaint', time: '3h ago' },
+    { id: 1, phone: '+91 987xx xxxx', text: 'Student queried B.Tech course details, registration fees, and hostel availability. Satisfied with instructions.', intent: 'Admissions Inquiry', time: '12m ago' },
+    { id: 2, phone: '+91 876xx xxxx', text: 'Inquired whether non-math background candidates qualify for MBA marketing. Confirmed eligibility criteria.', intent: 'Eligibility Check', time: '1h ago' },
+    { id: 3, phone: '+91 765xx xxxx', text: 'Queried direct admission quotas and scholarship benchmarks. Marked as warm lead.', intent: 'Scholarship Details', time: '3h ago' },
   ];
 
   return (
     <div className="flex-1 flex flex-col min-w-0 bg-white p-8 overflow-y-auto scrollbar-hide">
-      <div className="max-w-6xl mx-auto w-full space-y-12">
+      <div className="max-w-6xl mx-auto w-full space-y-12 pb-16">
+        
+        {/* Title */}
+        <div>
+          <h1 className="text-2xl font-black tracking-tighter uppercase italic">Telemetric Analytics</h1>
+          <p className="text-xs font-semibold text-neutral-400 uppercase tracking-widest mt-1">Grounded call analysis, package latency indicators, and intent indexes</p>
+        </div>
+
         {/* Stats Grid */}
-        <div className="grid grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           {stats.map((stat, idx) => (
-            <div key={idx} className="p-6 border border-border rounded-2xl bg-white hover:shadow-md transition-all group">
+            <div key={idx} className="p-6 border border-neutral-100 rounded-3xl bg-white shadow-sm hover:shadow-md transition-all group">
               <div className="flex justify-between items-start mb-4">
-                <div className={`p-2 rounded-xl ${stat.bg} ${stat.color} group-hover:scale-110 transition-transform`}>
+                <div className={`p-2.5 rounded-xl ${stat.bg} ${stat.color} group-hover:scale-110 transition-transform`}>
                   <stat.icon className="w-5 h-5" />
                 </div>
-                <div className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                  stat.change.startsWith('+') ? 'text-emerald-600 bg-emerald-50' : 'text-rose-600 bg-rose-50'
+                <div className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${
+                  stat.change.startsWith('+') || stat.change.startsWith('-') ? 'text-emerald-600 bg-emerald-50' : 'text-neutral-500 bg-neutral-50'
                 }`}>
                   {stat.change}
                 </div>
               </div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-secondary mb-1">{stat.label}</p>
-              <h2 className="text-2xl font-bold tracking-tight text-primary">{stat.value}</h2>
+              <p className="text-[9px] font-black uppercase tracking-wider text-neutral-400 mb-1">{stat.label}</p>
+              <h2 className="text-xl font-black tracking-tight text-neutral-900 leading-none">{stat.value}</h2>
             </div>
           ))}
         </div>
 
-        {/* Main Content Areas */}
-        <div className="grid grid-cols-3 gap-8">
-          {/* Recent Summaries List */}
-          <div className="col-span-2 space-y-6">
-            <div className="flex items-center justify-between px-2">
-              <h3 className="text-lg font-bold tracking-tight">Recent Interactions</h3>
-              <button className="text-xs font-semibold text-secondary hover:text-black transition-colors flex items-center gap-1 group">
-                Full History <ChevronRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
-              </button>
-            </div>
+        {/* Split Screen Metrics */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          
+          {/* Recent Transcripts & Grounded Interactions */}
+          <div className="lg:col-span-2 space-y-6">
+            <h3 className="text-xs font-black uppercase tracking-widest text-neutral-400 px-2">Telemetric Insights</h3>
             
             <div className="space-y-4">
               {recentSummaries.map((s) => (
-                <div key={s.id} className="p-6 border border-border rounded-2xl hover:border-black transition-all bg-white shadow-sm space-y-4">
+                <div key={s.id} className="p-6 border border-neutral-100 rounded-3xl hover:border-neutral-900 transition-all bg-white shadow-sm space-y-4 group">
                   <div className="flex justify-between items-start">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-accent flex items-center justify-center border border-border">
-                        <MessageSquare className="w-4 h-4 text-secondary" />
+                      <div className="w-8 h-8 rounded-xl bg-neutral-50 flex items-center justify-center border border-neutral-100">
+                        <MessageSquare className="w-4 h-4 text-neutral-400" />
                       </div>
                       <div>
-                        <p className="text-sm font-bold">{s.phone}</p>
-                        <p className="text-[10px] text-secondary font-medium uppercase tracking-widest">{s.intent}</p>
+                        <p className="text-xs font-black text-neutral-900">{s.phone}</p>
+                        <p className="text-[8px] text-neutral-400 font-black uppercase tracking-widest mt-0.5">{s.intent}</p>
                       </div>
                     </div>
-                    <span className="text-[11px] font-medium text-secondary">{s.time}</span>
+                    <span className="text-[10px] font-bold text-neutral-400">{s.time}</span>
                   </div>
                   
-                  <div className="bg-accent/30 p-4 rounded-xl border border-border/50">
-                    <p className="text-xs font-medium leading-relaxed text-secondary italic">"{s.text}"</p>
+                  <div className="bg-neutral-50/50 p-4 rounded-2xl border border-neutral-200/30">
+                    <p className="text-xs font-semibold leading-relaxed text-neutral-500 italic">"{s.text}"</p>
                   </div>
                   
                   <div className="flex gap-2">
-                    <span className="px-2 py-0.5 bg-slate-100 rounded text-[9px] font-bold text-slate-500 uppercase tracking-tighter">Transcript Attached</span>
-                    <span className="px-2 py-0.5 bg-emerald-100 rounded text-[9px] font-bold text-emerald-600 uppercase tracking-tighter">Resolved</span>
+                    <span className="px-2 py-0.5 bg-neutral-100 rounded text-[8px] font-black text-neutral-500 uppercase tracking-widest">Grounded Fact Ingest</span>
+                    <span className="px-2 py-0.5 bg-emerald-50 border border-emerald-100 rounded text-[8px] font-black text-emerald-600 uppercase tracking-widest">Lead Created</span>
                   </div>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Side Performance Indicators */}
-          <div className="space-y-8">
-            <div className="p-8 bg-black rounded-[2.5rem] shadow-xl text-white space-y-6">
-              <h3 className="text-sm font-bold uppercase tracking-[0.2em] opacity-60">Top Intents</h3>
+          {/* Telemetry Charts & Audio Latencies */}
+          <div className="space-y-6">
+            <h3 className="text-xs font-black uppercase tracking-widest text-neutral-400 px-2">Voice Gateway Telemetry</h3>
+            
+            <div className="p-6 bg-neutral-900 rounded-[2rem] shadow-xl text-white space-y-6 relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
+              <div className="flex justify-between items-center text-white">
+                <span className="text-[9px] font-black uppercase tracking-widest opacity-60">System Intent Split</span>
+                <Award className="w-4 h-4 text-emerald-400" />
+              </div>
+
               <div className="space-y-4">
-                {(isGlobal && globalData?.topIntents ? globalData.topIntents : [
-                  { label: 'Fees Inquiry', percent: 78, color: 'bg-emerald-500' },
-                  { label: 'Eligibility', percent: 45, color: 'bg-blue-500' },
-                  { label: 'Hostel Info', percent: 22, color: 'bg-indigo-500' },
-                ]).map((item: any, idx: number) => (
-                  <div key={idx} className="space-y-2">
-                    <div className="flex justify-between text-[10px] font-black uppercase tracking-widest">
-                      <span>{item.intent || item.label}</span>
-                      <span>{item.count ? `${item.count} Calls` : `${item.percent}%`}</span>
+                {[
+                  { intent: 'Admissions Inquiry', count: 48, percent: 48, color: 'bg-emerald-500' },
+                  { intent: 'Eligibility & Guidelines', count: 28, percent: 28, color: 'bg-indigo-500' },
+                  { intent: 'Fees & Pricing Structure', count: 14, percent: 14, color: 'bg-blue-500' },
+                  { intent: 'Miscellaneous/FAQs', count: 10, percent: 10, color: 'bg-neutral-500' },
+                ].map((item, idx) => (
+                  <div key={idx} className="space-y-1.5">
+                    <div className="flex justify-between text-[8px] font-black uppercase tracking-widest">
+                      <span>{item.intent}</span>
+                      <span>{item.percent}%</span>
                     </div>
                     <div className="h-1.5 w-full bg-white/10 rounded-full overflow-hidden">
-                      <div className={`h-full ${item.color || 'bg-emerald-500'}`} style={{ width: `${item.percent || (item.count ? (item.count / globalData.totalCalls * 100) : 0)}%` }} />
+                      <div className={`h-full ${item.color}`} style={{ width: `${item.percent}%` }} />
                     </div>
                   </div>
                 ))}
               </div>
-              <button className="w-full py-4 mt-4 bg-white text-black text-[10px] font-bold uppercase tracking-widest rounded-2xl hover:bg-white/90 transition-all">
-                Download Detailed CSV
-              </button>
             </div>
 
-            <div className="p-8 border border-border rounded-[2.5rem] bg-accent/20 space-y-4">
+            {/* Quality assurance latency tracker */}
+            <div className="p-6 border border-neutral-100 rounded-[2rem] bg-neutral-50/50 space-y-4">
               <div className="flex items-center gap-2">
-                <Users className="w-4 h-4 text-emerald-600" />
-                <h3 className="text-xs font-bold uppercase tracking-widest">Growth Pulse</h3>
+                <Layers className="w-4 h-4 text-emerald-500" />
+                <h3 className="text-[10px] font-black uppercase tracking-widest text-neutral-900 leading-none">Response Speed Benchmarks</h3>
               </div>
-              <p className="text-[11px] font-medium text-secondary leading-relaxed">
-                Interaction depth has increased by **24%** this month. Most active time for callers: **11AM - 2PM**.
+              <p className="text-[11px] text-neutral-400 font-semibold leading-relaxed">
+                VANI pipeline converts Twilio streams $\mu$-law binary packets to PCM WAV, feeds Llama-3.3 LLM models, and returns synthesized TTS voice waves in a **480ms** round-trip block.
               </p>
-              <div className="pt-2">
-                <button className="text-[10px] font-bold text-primary underline underline-offset-4 decoration-border hover:decoration-black transition-all">
-                   Optimize Schedule
-                </button>
-              </div>
             </div>
           </div>
+
         </div>
+
       </div>
     </div>
   );

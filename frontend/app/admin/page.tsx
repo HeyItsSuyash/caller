@@ -35,7 +35,7 @@ export default function AdminDashboard() {
 
     const user = JSON.parse(storedUser);
     if (user.role !== 'admin') {
-      router.push('/');
+      router.push('/workspace');
       return;
     }
     setAdminUser(user);

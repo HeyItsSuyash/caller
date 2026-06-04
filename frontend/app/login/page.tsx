@@ -33,7 +33,7 @@ export default function LoginPage() {
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
 
-      window.location.href = '/';
+      window.location.href = '/workspace';
     } catch (err: any) {
       setError(err.message);
     } finally {
