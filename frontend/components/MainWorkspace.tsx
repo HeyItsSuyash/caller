@@ -46,7 +46,7 @@ const MainWorkspace: React.FC<MainWorkspaceProps> = ({
         <header className="h-14 border-b border-neutral-100 px-8 flex items-center justify-between bg-white shrink-0 shadow-[0_1px_4px_rgba(0,0,0,0.005)]">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
-              <h2 className="font-black text-[12px] tracking-widest uppercase italic text-neutral-900">
+              <h2 className="font-black text-[12px] tracking-widest uppercase text-neutral-900">
                 {activeEntity || 'Select or Deploy Agent'}
               </h2>
               <ChevronDown className="w-3.5 h-3.5 text-neutral-400" />

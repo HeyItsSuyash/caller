@@ -51,7 +51,7 @@ export default function SignupPage() {
             <Activity className="text-white w-7 h-7" />
           </div>
           <div className="space-y-2">
-            <h1 className="text-3xl font-black tracking-tighter uppercase italic leading-none">Caller AI</h1>
+            <h1 className="text-3xl font-black tracking-tighter uppercase leading-none">Caller AI</h1>
             <p className="text-[10px] font-bold text-secondary uppercase tracking-[0.4em] opacity-50">Initialize New Workspace</p>
           </div>
         </div>

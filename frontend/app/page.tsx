@@ -222,7 +222,7 @@ app.post('/api/widget/call', async (req, res) => {
             <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center shadow-lg">
               <Activity className="text-black w-4.5 h-4.5" />
             </div>
-            <span className="font-black text-sm tracking-tight uppercase italic">CALLER OS</span>
+            <span className="font-black text-sm tracking-tight uppercase">CALLER OS</span>
           </div>
 
           <nav className="hidden md:flex items-center gap-8 text-[10px] font-black uppercase tracking-widest text-neutral-400">
@@ -306,7 +306,7 @@ app.post('/api/widget/call', async (req, res) => {
           </div>
 
           <div className="space-y-4">
-            <h1 className="text-4xl md:text-5.5xl font-black tracking-tighter uppercase italic leading-[0.95] font-display">
+            <h1 className="text-4xl md:text-5.5xl font-black tracking-tighter uppercase leading-[0.95] font-display">
               AI Voice Agents <br />
               <span className="bg-gradient-to-r from-white via-neutral-100 to-neutral-400 bg-clip-text text-transparent">
                 For Real Conversations.
@@ -374,7 +374,7 @@ app.post('/api/widget/call', async (req, res) => {
           className="text-center max-w-2xl mx-auto space-y-4"
         >
           <span className="text-[9px] font-black uppercase tracking-[0.25em] text-neutral-500">Robust Infrastructure</span>
-          <h2 className="text-3xl font-black uppercase tracking-tight italic font-display">Engineered for Production Operations</h2>
+          <h2 className="text-3xl font-black uppercase tracking-tight font-display">Engineered for Production Operations</h2>
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -419,7 +419,7 @@ app.post('/api/widget/call', async (req, res) => {
           className="text-center max-w-2xl mx-auto space-y-4"
         >
           <span className="text-[9px] font-black uppercase tracking-[0.25em] text-neutral-500">Use Cases</span>
-          <h2 className="text-3xl font-black uppercase tracking-tight italic font-display">Industry Integrations</h2>
+          <h2 className="text-3xl font-black uppercase tracking-tight font-display">Industry Integrations</h2>
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -453,7 +453,7 @@ app.post('/api/widget/call', async (req, res) => {
           className="lg:col-span-5 space-y-6"
         >
           <span className="text-[9px] font-black uppercase tracking-[0.25em] text-neutral-500">Developer First</span>
-          <h2 className="text-3xl font-black uppercase tracking-tight italic font-display">Voice Channels via Code</h2>
+          <h2 className="text-3xl font-black uppercase tracking-tight font-display">Voice Channels via Code</h2>
           <p className="text-xs text-neutral-400 font-semibold leading-relaxed">
             Provision active Twilio streams, hook Webhook pipelines, and deploy localized models using REST APIs. Integrates seamlessly into local SIP networks.
           </p>
@@ -501,7 +501,7 @@ app.post('/api/widget/call', async (req, res) => {
       <section id="pricing" className="relative z-10 max-w-7xl mx-auto px-6 py-24 space-y-16">
         <div className="text-center max-w-2xl mx-auto space-y-4">
           <span className="text-[10px] font-black uppercase tracking-[0.25em] text-indigo-400">Pricing Matrix</span>
-          <h2 className="text-3xl font-black uppercase tracking-tight italic">Plans for Scale</h2>
+          <h2 className="text-3xl font-black uppercase tracking-tight">Plans for Scale</h2>
         </div>
         
         <PricingCards />
@@ -538,7 +538,7 @@ app.post('/api/widget/call', async (req, res) => {
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_50%,#6366f1/5,transparent_100%)] pointer-events-none" />
         
         <div className="space-y-4 max-w-2xl mx-auto">
-          <h2 className="text-4xl font-black tracking-tighter uppercase italic leading-[0.95]">
+          <h2 className="text-4xl font-black tracking-tighter uppercase leading-[0.95]">
             Deploy Your AI Workforce Today.
           </h2>
           <p className="text-xs font-semibold text-neutral-500 uppercase tracking-widest leading-relaxed">
@@ -619,7 +619,7 @@ app.post('/api/widget/call', async (req, res) => {
                 <Activity className="text-black w-6 h-6 animate-pulse" />
               </div>
               <div>
-                <h3 className="text-xl font-black tracking-tight uppercase italic text-white">
+                <h3 className="text-xl font-black tracking-tight uppercase text-white">
                   {authMode === 'login' ? 'Access Console' : 'Deploy OS Workspace'}
                 </h3>
                 <p className="text-[9px] font-bold text-neutral-500 uppercase tracking-widest mt-1">

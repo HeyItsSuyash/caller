@@ -63,7 +63,7 @@ const EntityModal: React.FC<EntityModalProps> = ({ isOpen, onClose, onCreated })
               <Sparkles className="text-white w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-2xl font-black tracking-tight uppercase italic leading-none">New Entity</h2>
+              <h2 className="text-2xl font-black tracking-tight uppercase leading-none">New Entity</h2>
               <p className="text-[10px] font-bold text-secondary uppercase tracking-[0.2em] opacity-50 mt-1">Agent Neural Initialization</p>
             </div>
           </div>

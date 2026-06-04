@@ -62,7 +62,7 @@ const Sidebar: React.FC<SidebarProps> = ({
             <Activity className="text-white w-5 h-5 animate-pulse" />
           </div>
           <div className="flex flex-col">
-            <span className="font-black tracking-tight text-[15px] uppercase italic leading-none">CALLER OS</span>
+            <span className="font-black tracking-tight text-[15px] uppercase leading-none">CALLER OS</span>
             <span className="text-[9px] font-bold text-neutral-400 tracking-[0.2em] uppercase mt-0.5">Enterprise Portal</span>
           </div>
         </div>
