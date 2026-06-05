@@ -20,7 +20,7 @@ const BACKEND_URL = getBackendUrl();
 
 export default function WorkspacePage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState('Dashboard');
+  const [activeTab, setActiveTab] = useState('Overview');
   const [activeEntity, setActiveEntity] = useState('');
   const [callStatus, setCallStatus] = useState<'idle' | 'calling' | 'connected' | 'error'>('idle');
   const [transcripts, setTranscripts] = useState<any[]>([]);

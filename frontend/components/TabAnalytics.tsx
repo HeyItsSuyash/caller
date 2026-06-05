@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   TrendingUp, 
   Users, 
@@ -16,9 +16,18 @@ import {
 interface TabAnalyticsProps {
   analyticsData: any[];
   isGlobal?: boolean;
+  activeSubpage?: string;
 }
 
-const TabAnalytics: React.FC<TabAnalyticsProps> = ({ analyticsData, isGlobal }) => {
+const TabAnalytics: React.FC<TabAnalyticsProps> = ({ analyticsData, isGlobal, activeSubpage }) => {
+  const [selectedSubpage, setSelectedSubpage] = useState<'Performance' | 'Conversions' | 'Revenue' | 'Agent Analytics' | 'Call Analytics'>('Performance');
+
+  React.useEffect(() => {
+    if (activeSubpage) {
+      setSelectedSubpage(activeSubpage as any);
+    }
+  }, [activeSubpage]);
+
   const globalData = isGlobal && analyticsData.length > 0 ? analyticsData[0] : null;
 
   const stats = [

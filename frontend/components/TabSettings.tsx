@@ -13,7 +13,19 @@ import {
   FileCheck
 } from 'lucide-react';
 
-const TabSettings = () => {
+interface TabSettingsProps {
+  activeSubpage?: string;
+}
+
+const TabSettings: React.FC<TabSettingsProps> = ({ activeSubpage }) => {
+  const [selectedSubpage, setSelectedSubpage] = useState<'General' | 'Telephony' | 'Security' | 'Notifications' | 'Billing' | 'Developer'>('General');
+
+  React.useEffect(() => {
+    if (activeSubpage) {
+      setSelectedSubpage(activeSubpage as any);
+    }
+  }, [activeSubpage]);
+
   const [voiceModel, setVoiceModel] = useState('Google Standard (Poly.Aditi)');
   const [language, setLanguage] = useState('Hinglish (Mix of Hindi/English)');
   const [tone, setTone] = useState('Friendly & Professional');
