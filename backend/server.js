@@ -1,4 +1,5 @@
-require("dotenv").config();
+const fs = require('fs');
+require("dotenv").config({ path: fs.existsSync('.env.local') ? '.env.local' : '.env' });
 const { execSync } = require('child_process');
 
 try {

@@ -1,28 +1,11 @@
-const { MongoClient, ObjectId } = require('mongodb');
-
-const uri = process.env.MONGODB_URI;
-const dbName = process.env.MONGODB_DB_NAME || 'caller_ai';
-
-let client;
-let db;
-
-async function connect() {
-  if (db) return db;
-  if (!client) {
-    client = new MongoClient(uri);
-  }
-  await client.connect();
-  db = client.db(dbName);
-  return db;
-}
+const prisma = require('./db');
 
 /**
  * Find user by email.
  */
 async function findUserByEmail(email) {
   try {
-    const database = await connect();
-    return await database.collection('users').findOne({ email: email.toLowerCase() });
+    return await prisma.user.findUnique({ where: { email: email.toLowerCase() } });
   } catch (err) {
     console.error(`[UserService] findUserByEmail error:`, err.message);
     throw err;
@@ -34,8 +17,7 @@ async function findUserByEmail(email) {
  */
 async function findUserById(id) {
   try {
-    const database = await connect();
-    return await database.collection('users').findOne({ _id: new ObjectId(id) });
+    return await prisma.user.findUnique({ where: { id } });
   } catch (err) {
     console.error(`[UserService] findUserById error:`, err.message);
     throw err;
@@ -47,15 +29,14 @@ async function findUserById(id) {
  */
 async function createUser(userData) {
   try {
-    const database = await connect();
-    const user = {
-      ...userData,
-      email: userData.email.toLowerCase(),
-      role: userData.role || 'user',
-      created_at: new Date().toISOString()
-    };
-    const result = await database.collection('users').insertOne(user);
-    return { ...user, _id: result.insertedId };
+    const user = await prisma.user.create({
+      data: {
+        email: userData.email.toLowerCase(),
+        password: userData.password,
+        role: userData.role || 'user',
+      }
+    });
+    return user;
   } catch (err) {
     console.error(`[UserService] createUser error:`, err.message);
     throw err;

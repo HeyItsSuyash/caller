@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { authenticate, authorize } = require('../middleware/auth');
 const entityService = require('../services/entity');
-const { connect } = require('../services/mongodb');
+const prisma = require('../services/db');
 
 /**
  * @route   GET /admin/users
@@ -11,13 +11,12 @@ const { connect } = require('../services/mongodb');
  */
 router.get('/users', authenticate, authorize('admin'), async (req, res) => {
   try {
-    const db = await connect();
-    const users = await db.collection('users').find({}).toArray();
+    const users = await prisma.user.findMany();
     
     // Enrich with entity counts
     const enrichedUsers = await Promise.all(users.map(async (user) => {
-      const count = await db.collection('entities').countDocuments({ 
-        userId: new (require('mongodb').ObjectId)(user._id) 
+      const count = await prisma.entity.count({ 
+        where: { userId: user.id }
       });
       const { password, ...safeUser } = user;
       return { ...safeUser, entityCount: count };
@@ -37,23 +36,29 @@ router.get('/users', authenticate, authorize('admin'), async (req, res) => {
  */
 router.get('/analytics', authenticate, authorize('admin'), async (req, res) => {
   try {
-    const db = await connect();
-    const totalCalls = await db.collection('calls').countDocuments({});
-    const totalUsers = await db.collection('users').countDocuments({});
-    const totalEntities = await db.collection('entities').countDocuments({});
+    const totalCalls = await prisma.call.count();
+    const totalUsers = await prisma.user.count();
+    const totalEntities = await prisma.entity.count();
     
     // Top intents across system
-    const intentAggr = await db.collection('calls').aggregate([
-      { $group: { _id: "$intent", count: { $sum: 1 } } },
-      { $sort: { count: -1 } },
-      { $limit: 5 }
-    ]).toArray();
+    const intentAggrRaw = await prisma.call.groupBy({
+      by: ['intent'],
+      _count: {
+        intent: true
+      },
+      orderBy: {
+        _count: {
+          intent: 'desc'
+        }
+      },
+      take: 5
+    });
 
     res.json({
       totalCalls,
       totalUsers,
       totalEntities,
-      topIntents: intentAggr.map(i => ({ intent: i._id || 'unknown', count: i.count }))
+      topIntents: intentAggrRaw.map(i => ({ intent: i.intent || 'unknown', count: i._count.intent }))
     });
   } catch (error) {
     console.error('Global analytics error:', error);
@@ -68,11 +73,9 @@ router.get('/analytics', authenticate, authorize('admin'), async (req, res) => {
  */
 router.get('/leads', authenticate, authorize('admin'), async (req, res) => {
   try {
-    const db = await connect();
-    const leads = await db.collection('leads')
-      .find({})
-      .sort({ createdAt: -1 })
-      .toArray();
+    const leads = await prisma.lead.findMany({
+      orderBy: { createdAt: 'desc' }
+    });
     res.json(leads);
   } catch (error) {
     console.error('Admin leads error:', error);
@@ -100,12 +103,10 @@ router.get('/entities', authenticate, authorize('admin'), async (req, res) => {
  */
 router.get('/calls', authenticate, authorize('admin'), async (req, res) => {
   try {
-    const db = await connect();
-    const calls = await db.collection('calls')
-      .find({})
-      .sort({ createdAt: -1 })
-      .limit(100)
-      .toArray();
+    const calls = await prisma.call.findMany({
+      orderBy: { createdAt: 'desc' },
+      take: 100
+    });
     res.json(calls);
   } catch (error) {
     console.error('Admin calls error:', error);

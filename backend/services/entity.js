@@ -1,65 +1,61 @@
-const { connect } = require('./mongodb');
-const { ObjectId } = require('mongodb');
+const prisma = require('./db');
 
 class EntityService {
   /**
    * Create a new entity
    */
   async createEntity(data) {
-    const db = await connect();
-    if (!db) throw new Error('DB connection failed');
+    const { userId, name, purpose, voice_model, instructions } = data;
     
-    const entity = {
-      ...data,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    };
+    const entity = await prisma.entity.create({
+      data: {
+        userId,
+        name,
+        purpose,
+        voice_model: voice_model || "Google Standard",
+        instructions: instructions || ""
+      }
+    });
     
-    // Ensure userId is an ObjectId if it's a string
-    if (typeof entity.userId === 'string') {
-      entity.userId = new ObjectId(entity.userId);
-    }
-    
-    const result = await db.collection('entities').insertOne(entity);
-    return { ...entity, _id: result.insertedId };
+    return entity;
   }
 
   /**
    * Get all entities for a specific user
    */
   async getEntitiesByUser(userId) {
-    const db = await connect();
-    if (!db) return [];
-    const uid = typeof userId === 'string' ? new ObjectId(userId) : userId;
-    return await db.collection('entities').find({ userId: uid }).toArray();
+    return await prisma.entity.findMany({
+      where: { userId }
+    });
   }
 
   /**
    * Get all entities (Admin)
    */
   async getAllEntities() {
-    const db = await connect();
-    if (!db) return [];
-    return await db.collection('entities').find({}).toArray();
+    return await prisma.entity.findMany();
   }
 
   /**
    * Get entity by ID
    */
   async getEntityById(id) {
-    const db = await connect();
-    if (!db) return null;
-    return await db.collection('entities').findOne({ _id: new ObjectId(id) });
+    return await prisma.entity.findUnique({
+      where: { id }
+    });
   }
 
   /**
    * Get entity by name (Case-insensitive)
    */
   async getEntityByName(name) {
-    const db = await connect();
-    if (!db) return null;
-    return await db.collection('entities').findOne({ 
-      name: { $regex: new RegExp(`^${name}$`, 'i') } 
+    return await prisma.entity.findFirst({
+      where: {
+        name: {
+          equals: name,
+          mode: 'insensitive'
+        }
+      }
     });
   }
 
@@ -67,49 +63,54 @@ class EntityService {
    * Update entity (Owner check)
    */
   async updateEntity(id, userId, data) {
-    const db = await connect();
-    if (!db) return null;
-    const result = await db.collection('entities').findOneAndUpdate(
-      { _id: new ObjectId(id), userId: new ObjectId(userId) },
-      { $set: { ...data, updatedAt: new Date() } },
-      { returnDocument: 'after' }
-    );
-    return result.value ? result.value : result; // Some versions of driver return the object directly
+    // Check ownership first
+    const existing = await prisma.entity.findUnique({ where: { id } });
+    if (!existing || existing.userId !== userId) {
+      return null;
+    }
+
+    const { name, purpose, voice_model, instructions } = data;
+    
+    return await prisma.entity.update({
+      where: { id },
+      data: {
+        name: name !== undefined ? name : undefined,
+        purpose: purpose !== undefined ? purpose : undefined,
+        voice_model: voice_model !== undefined ? voice_model : undefined,
+        instructions: instructions !== undefined ? instructions : undefined
+      }
+    });
   }
 
-  /**
-   * Delete entity (Owner check)
-   */
   /**
    * Delete entity (Owner check) and cascadingly delete its knowledge
    */
   async deleteEntity(id, userId) {
-    const db = await connect();
-    if (!db) return false;
-
-    // 1. Fetch the entity to get its name (needed for knowledge cleanup)
-    const entity = await db.collection('entities').findOne({
-      _id: new ObjectId(id),
-      userId: new ObjectId(userId)
+    // 1. Fetch the entity
+    const entity = await prisma.entity.findUnique({
+      where: { id }
     });
 
-    if (!entity) return false;
+    if (!entity || entity.userId !== userId) return false;
 
     // 2. Delete associated knowledge fragments
-    // We use a case-insensitive regex to match the entity name
-    await db.collection('knowledge').deleteMany({
-      entity: { $regex: new RegExp(`^${entity.name}$`, 'i') }
+    await prisma.knowledge.deleteMany({
+      where: {
+        entity: {
+          equals: entity.name,
+          mode: 'insensitive'
+        }
+      }
     });
 
     console.log(`[EntityService] Cascading delete: Purged knowledge for agent "${entity.name}"`);
 
     // 3. Delete the entity itself
-    const result = await db.collection('entities').deleteOne({
-      _id: new ObjectId(id),
-      userId: new ObjectId(userId)
+    await prisma.entity.delete({
+      where: { id }
     });
 
-    return result.deletedCount > 0;
+    return true;
   }
 }
 

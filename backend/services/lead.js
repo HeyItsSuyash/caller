@@ -1,60 +1,56 @@
-const { connect } = require('./mongodb');
-const { ObjectId } = require('mongodb');
+const prisma = require('./db');
 
 class LeadService {
   /**
    * Create a new lead
    */
   async createLead(data) {
-    const db = await connect();
-    if (!db) throw new Error('DB connection failed');
+    const { entity_id, phone, status, ...restData } = data;
 
-    const lead = {
-      ...data,
-      status: data.status || 'new',
-      createdAt: new Date(),
-      updatedAt: new Date()
-    };
+    const lead = await prisma.lead.create({
+      data: {
+        entity_id,
+        phone,
+        status: status || 'new',
+        data: Object.keys(restData).length > 0 ? restData : undefined
+      }
+    });
 
-    if (data.entity_id && typeof data.entity_id === 'string') {
-      lead.entity_id = new ObjectId(data.entity_id);
-    }
-
-    const result = await db.collection('leads').insertOne(lead);
-    return { ...lead, _id: result.insertedId };
+    return lead;
   }
 
   /**
    * Get leads for an entity or user
    */
   async getLeads(query = {}) {
-    const db = await connect();
-    if (!db) return [];
+    const where = {};
+    if (query.entity_id) where.entity_id = query.entity_id;
+    if (query.phone) where.phone = query.phone;
 
-    const mongoQuery = {};
-    if (query.entity_id) mongoQuery.entity_id = new ObjectId(query.entity_id);
-    if (query.phone) mongoQuery.phone = query.phone;
-
-    return await db.collection('leads')
-      .find(mongoQuery)
-      .sort({ createdAt: -1 })
-      .toArray();
+    return await prisma.lead.findMany({
+      where,
+      orderBy: { createdAt: 'desc' }
+    });
   }
 
   /**
    * Update lead status or info
    */
   async updateLead(id, data) {
-    const db = await connect();
-    if (!db) return null;
+    const { entity_id, phone, status, ...restData } = data;
 
-    const result = await db.collection('leads').findOneAndUpdate(
-      { _id: new ObjectId(id) },
-      { $set: { ...data, updatedAt: new Date() } },
-      { returnDocument: 'after' }
-    );
+    // To merge JSON `data` if necessary, we can just replace it for simplicity, 
+    // or fetch the old one and merge. Here we replace.
+    const updatePayload = {};
+    if (entity_id !== undefined) updatePayload.entity_id = entity_id;
+    if (phone !== undefined) updatePayload.phone = phone;
+    if (status !== undefined) updatePayload.status = status;
+    if (Object.keys(restData).length > 0) updatePayload.data = restData;
 
-    return result.value || result;
+    return await prisma.lead.update({
+      where: { id },
+      data: updatePayload
+    });
   }
 }
 

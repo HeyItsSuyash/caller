@@ -1,53 +1,17 @@
-const { MongoClient, ObjectId } = require('mongodb');
-
-const uri = process.env.MONGODB_URI;
-const dbName = process.env.MONGODB_DB_NAME || 'caller_ai';
-
-// Initialize client only if URI exists to avoid immediate crash
-let client;
-if (uri) {
-  try {
-    client = new MongoClient(uri, {
-      serverSelectionTimeoutMS: 2000, // Connection timeout in 2 seconds
-      connectTimeoutMS: 2000
-    });
-  } catch (err) {
-    console.error('[MongoDB] Initialization error:', err.message);
-  }
-}
-
-let db;
-
-let isConnecting = false;
+const prisma = require('./db');
 
 async function connect() {
-  if (!uri || !client) return null;
-  if (db) return db;
-  if (isConnecting) {
-      // Wait a bit if already connecting to avoid multiple parallel attempts
-      await new Promise(resolve => setTimeout(resolve, 500));
-      if (db) return db;
-  }
+  // Legacy compatibility: Just return true or a dummy db object 
+  // since Prisma connects automatically.
+  return true;
+}
 
-  isConnecting = true;
-  try {
-    console.log('[MongoDB] Attempting to connect...');
-    // We use a timeout because sometimes client.connect() hangs indefinitely on Windows/certain networks
-    const connectPromise = client.connect();
-    const timeoutPromise = new Promise((_, reject) => 
-      setTimeout(() => reject(new Error('Connection timed out')), 5000)
-    );
-    
-    await Promise.race([connectPromise, timeoutPromise]);
-    db = client.db(dbName);
-    console.log(`[MongoDB] Connected successfully to database: ${dbName}`);
-    return db;
-  } catch (err) {
-    console.error(`[MongoDB] Connection error:`, err.message);
-    return null;
-  } finally {
-    isConnecting = false;
-  }
+function getDb() {
+  return null; // Legacy compatibility
+}
+
+async function closeConnection() {
+  await prisma.$disconnect();
 }
 
 /**
@@ -55,23 +19,25 @@ async function connect() {
  */
 async function saveCall(callData) {
   try {
-    const database = await connect();
-    if (!database) return null;
+    const { entity_id, phone, summary, resolution_status, intent, ...restData } = callData;
 
-    const record = {
-      ...callData,
-      createdAt: new Date(),
-      entity_id: callData.entity_id ? new ObjectId(callData.entity_id) : null
-    };
+    const record = await prisma.call.create({
+      data: {
+        entity_id: entity_id || undefined,
+        phone,
+        summary,
+        resolution_status,
+        intent,
+        callData: Object.keys(restData).length > 0 ? restData : undefined
+      }
+    });
 
-    const result = await database.collection('calls').insertOne(record);
-    
-    // Also update the legacy analytics collection for backward compatibility
-    await saveCallSummary(callData.phone, callData);
+    // Update legacy analytics array as well
+    await saveCallSummary(phone, callData);
 
-    return { ...record, _id: result.insertedId };
+    return record;
   } catch (err) {
-    console.error('[MongoDB] Error saving call:', err.message);
+    console.error('[PostgreSQL/Prisma] Error saving call:', err.message);
     return null;
   }
 }
@@ -81,15 +47,12 @@ async function saveCall(callData) {
  */
 async function getEntityCalls(entityId) {
   try {
-    const database = await connect();
-    if (!database) return [];
-
-    return await database.collection('calls')
-      .find({ entity_id: new ObjectId(entityId) })
-      .sort({ createdAt: -1 })
-      .toArray();
+    return await prisma.call.findMany({
+      where: { entity_id: entityId },
+      orderBy: { createdAt: 'desc' }
+    });
   } catch (err) {
-    console.error('[MongoDB] Error fetching entity calls:', err.message);
+    console.error('[PostgreSQL/Prisma] Error fetching entity calls:', err.message);
     return [];
   }
 }
@@ -99,16 +62,12 @@ async function getEntityCalls(entityId) {
  */
 async function getCallMemory(phoneNumber) {
   try {
-    const database = await connect();
-    if (!database) return [];
-    
-    // Search in the new calls collection first
-    const calls = await database.collection('calls')
-      .find({ phone: phoneNumber })
-      .sort({ createdAt: -1 })
-      .limit(5)
-      .toArray();
-    
+    const calls = await prisma.call.findMany({
+      where: { phone: phoneNumber },
+      orderBy: { createdAt: 'desc' },
+      take: 5
+    });
+
     if (calls.length > 0) {
       return calls.map(c => ({
         text: c.summary,
@@ -117,12 +76,15 @@ async function getCallMemory(phoneNumber) {
       }));
     }
 
-    // Fallback to legacy analytics
-    const result = await database.collection('analytics').findOne({ phone_number: phoneNumber });
-    if (!result) return [];
-    return result.summaries || [];
+    // Fallback to analytics
+    const analytics = await prisma.analytics.findUnique({
+      where: { phone_number: phoneNumber }
+    });
+    
+    if (!analytics) return [];
+    return Array.isArray(analytics.summaries) ? analytics.summaries : [];
   } catch (err) {
-    console.error(`[MongoDB] Error fetching memory for ${phoneNumber}:`, err.message);
+    console.error(`[PostgreSQL/Prisma] Error fetching memory for ${phoneNumber}:`, err.message);
     return [];
   }
 }
@@ -132,11 +94,11 @@ async function getCallMemory(phoneNumber) {
  */
 async function saveCallSummary(phoneNumber, summaryData) {
   try {
-    const database = await connect();
-    if (!database) return;
-    
-    const existing = await database.collection('analytics').findOne({ phone_number: phoneNumber });
-    let updatedSummaries = existing ? (existing.summaries || []) : [];
+    const existing = await prisma.analytics.findUnique({
+      where: { phone_number: phoneNumber }
+    });
+
+    let updatedSummaries = existing && Array.isArray(existing.summaries) ? existing.summaries : [];
 
     updatedSummaries.unshift({
       text: summaryData.summary,
@@ -145,18 +107,13 @@ async function saveCallSummary(phoneNumber, summaryData) {
       details: summaryData.important_details || {}
     });
 
-    await database.collection('analytics').updateOne(
-      { phone_number: phoneNumber },
-      { 
-        $set: { 
-          summaries: updatedSummaries,
-          updated_at: new Date().toISOString()
-        } 
-      },
-      { upsert: true }
-    );
+    await prisma.analytics.upsert({
+      where: { phone_number: phoneNumber },
+      update: { summaries: updatedSummaries },
+      create: { phone_number: phoneNumber, summaries: updatedSummaries }
+    });
   } catch (err) {
-    console.error(`[MongoDB] Error saving summary for ${phoneNumber}:`, err.message);
+    console.error(`[PostgreSQL/Prisma] Error saving summary for ${phoneNumber}:`, err.message);
   }
 }
 
@@ -165,15 +122,11 @@ async function saveCallSummary(phoneNumber, summaryData) {
  */
 async function getAllAnalytics() {
   try {
-    const database = await connect();
-    if (!database) return [];
-    
-    return await database.collection('calls')
-      .find({})
-      .sort({ createdAt: -1 })
-      .toArray();
+    return await prisma.call.findMany({
+      orderBy: { createdAt: 'desc' }
+    });
   } catch (err) {
-    console.error('[MongoDB] Error fetching all analytics:', err.message);
+    console.error('[PostgreSQL/Prisma] Error fetching all analytics:', err.message);
     return [];
   }
 }
@@ -183,25 +136,29 @@ async function getAllAnalytics() {
  */
 async function getKnowledge(entity) {
   try {
-    const database = await connect();
-    if (!database) return [];
-    
-    const query = (entity && entity !== 'unknown')
-      ? { entity: { $regex: new RegExp(`^${entity}$`, 'i') } }
-      : { 
-          $or: [
-            { entity: { $exists: false } },
+    if (entity && entity !== 'unknown') {
+      return await prisma.knowledge.findMany({
+        where: {
+          entity: {
+            equals: entity,
+            mode: 'insensitive'
+          }
+        },
+        orderBy: { created_at: 'desc' }
+      });
+    } else {
+      return await prisma.knowledge.findMany({
+        where: {
+          OR: [
             { entity: null },
             { entity: "" }
-          ] 
-        };
-    
-    return await database.collection('knowledge')
-      .find(query)
-      .sort({ created_at: -1 })
-      .toArray();
+          ]
+        },
+        orderBy: { created_at: 'desc' }
+      });
+    }
   } catch (err) {
-    console.error('[MongoDB] Error fetching knowledge:', err.message);
+    console.error('[PostgreSQL/Prisma] Error fetching knowledge:', err.message);
     return [];
   }
 }
@@ -211,18 +168,17 @@ async function getKnowledge(entity) {
  */
 async function addKnowledge(data) {
   try {
-    const database = await connect();
-    if (!database) return null;
-    
-    const doc = {
-      ...data,
-      created_at: new Date().toISOString()
-    };
-    
-    const result = await database.collection('knowledge').insertOne(doc);
-    return { ...doc, _id: result.insertedId };
+    const doc = await prisma.knowledge.create({
+      data: {
+        title: data.title,
+        content: data.content,
+        entity: data.entity,
+        type: data.type
+      }
+    });
+    return doc;
   } catch (err) {
-    console.error('[MongoDB] Error adding knowledge:', err.message);
+    console.error('[PostgreSQL/Prisma] Error adding knowledge:', err.message);
     return null;
   }
 }
@@ -232,22 +188,20 @@ async function addKnowledge(data) {
  */
 async function deleteKnowledge(id) {
   try {
-    const database = await connect();
-    if (!database) return false;
-    
-    const { ObjectId } = require('mongodb');
-    const result = await database.collection('knowledge').deleteOne({ _id: new ObjectId(id) });
-    return result.deletedCount > 0;
+    await prisma.knowledge.delete({
+      where: { id }
+    });
+    return true;
   } catch (err) {
-    console.error('[MongoDB] Error deleting knowledge:', err.message);
+    console.error('[PostgreSQL/Prisma] Error deleting knowledge:', err.message);
     return false;
   }
 }
 
 module.exports = {
   connect,
-  getDb: () => db,
-  closeConnection: () => client && client.close(),
+  getDb,
+  closeConnection,
   saveCall,
   getEntityCalls,
   getCallMemory,
