@@ -176,7 +176,7 @@ export default function WorkspacePage() {
   };
 
   return (
-    <div className="flex flex-col h-screen w-full overflow-hidden bg-white">
+    <div className="flex flex-col h-screen w-full overflow-hidden bg-black">
       {/* Admin Impersonation Banner */}
       {targetUser && (
         <div className="bg-emerald-600 px-4 py-1.5 flex items-center justify-between text-white text-[11px] font-bold uppercase tracking-widest z-50">
