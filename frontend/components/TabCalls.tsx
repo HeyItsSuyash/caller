@@ -28,10 +28,11 @@ interface TabCallsProps {
   transcripts: any[];
   callStatus: string;
   onCall: (number: string) => void;
+  onHangup: () => void;
   activeSubpage?: string;
 }
 
-const TabCalls: React.FC<TabCallsProps> = ({ transcripts, callStatus, onCall, activeSubpage }) => {
+const TabCalls: React.FC<TabCallsProps> = ({ transcripts, callStatus, onCall, onHangup, activeSubpage }) => {
   const [selectedSubpage, setSelectedSubpage] = useState<'Live Calls' | 'Recent Calls' | 'Scheduled Calls' | 'Recordings' | 'Call Logs'>('Live Calls');
 
   React.useEffect(() => {
@@ -56,10 +57,10 @@ const TabCalls: React.FC<TabCallsProps> = ({ transcripts, callStatus, onCall, ac
   ];
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-black text-white relative">
+    <div className="flex-1 flex flex-col h-full bg-transparent text-white relative">
       
       {/* Subpage Tabs Switcher */}
-      <div className="px-8 border-b border-white/5 bg-black/60 shrink-0 flex justify-between items-center h-12">
+      <div className="px-8 border-b border-white/5 bg-transparent shrink-0 flex justify-between items-center h-12">
         <div className="flex gap-4">
           {(['Live Calls', 'Recent Calls', 'Scheduled Calls', 'Recordings', 'Call Logs'] as const).map((tab) => (
             <button
@@ -79,15 +80,15 @@ const TabCalls: React.FC<TabCallsProps> = ({ transcripts, callStatus, onCall, ac
       </div>
 
       {/* Workspace Display Area */}
-      <div className="flex-1 overflow-hidden flex">
+      <div className="flex-1 overflow-hidden flex p-6 gap-6">
         
         {/* ====================================================
             LIVE CALLS SUBPAGE
             ==================================================== */}
         {selectedSubpage === 'Live Calls' && (
-          <div className="flex-1 flex divide-x divide-white/10 overflow-hidden">
+          <div className="flex-1 flex gap-6 overflow-hidden">
             {/* Left dial controller */}
-            <div className="w-1/3 p-6 flex flex-col gap-6 bg-[#0a0a0a]/30 overflow-y-auto">
+            <div className="w-1/3 p-5 flex flex-col gap-5 bg-white/[0.015] border border-white/[0.05] rounded-lg overflow-y-auto">
               <div>
                 <h3 className="text-xs font-black uppercase tracking-widest text-neutral-400 font-display mb-1">Outbound Dialer</h3>
                 <p className="text-[9px] text-neutral-500 font-bold uppercase">Configure & initialize live outbound dialing</p>
@@ -101,7 +102,7 @@ const TabCalls: React.FC<TabCallsProps> = ({ transcripts, callStatus, onCall, ac
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value)}
                     placeholder="Enter phone number..."
-                    className="w-full px-4 py-3 bg-black border border-white/10 text-white rounded-xl focus:border-white focus:ring-0 text-xs font-semibold"
+                    className="w-full px-4 py-2 bg-transparent border border-white/[0.05] text-white rounded-lg focus:border-white focus:ring-0 text-xs font-semibold"
                   />
                 </div>
 
@@ -109,7 +110,7 @@ const TabCalls: React.FC<TabCallsProps> = ({ transcripts, callStatus, onCall, ac
                   <button 
                     onClick={() => onCall(phoneNumber)}
                     disabled={callStatus === 'calling' || callStatus === 'connected'}
-                    className={`w-full py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-2
+                    className={`w-full py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-2
                       ${callStatus === 'idle' || callStatus === 'error'
                         ? 'bg-white text-black hover:bg-neutral-100'
                         : 'bg-white/5 text-neutral-500 cursor-not-allowed'}
@@ -119,9 +120,9 @@ const TabCalls: React.FC<TabCallsProps> = ({ transcripts, callStatus, onCall, ac
                     <span>Dial</span>
                   </button>
                   <button 
-                    onClick={() => {}}
+                    onClick={onHangup}
                     disabled={callStatus !== 'connected'}
-                    className={`w-full py-3.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-2
+                    className={`w-full py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer flex items-center justify-center gap-2
                       ${callStatus === 'connected' ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20 hover:bg-rose-500/20' : 'bg-white/5 text-neutral-500 cursor-not-allowed'}
                     `}
                   >
@@ -132,7 +133,7 @@ const TabCalls: React.FC<TabCallsProps> = ({ transcripts, callStatus, onCall, ac
               </div>
 
               {/* Status Display */}
-              <div className="p-4 rounded-2xl bg-black border border-white/5 flex items-center justify-between">
+              <div className="p-4 rounded-lg bg-white/[0.01] border border-white/[0.05] flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <span className="relative flex h-2.5 w-2.5">
                     <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
@@ -153,8 +154,8 @@ const TabCalls: React.FC<TabCallsProps> = ({ transcripts, callStatus, onCall, ac
             </div>
 
             {/* Right Active Transcript Screen */}
-            <div className="flex-1 flex flex-col justify-between bg-black overflow-hidden relative">
-              <div className="p-6 border-b border-white/5 flex justify-between items-center">
+            <div className="flex-1 flex flex-col justify-between bg-white/[0.015] border border-white/[0.05] rounded-lg overflow-hidden relative">
+              <div className="p-5 border-b border-white/5 flex justify-between items-center">
                 <h3 className="text-xs font-black uppercase tracking-widest text-neutral-400 font-display">Live Speech Gateway</h3>
                 <span className="text-[8.5px] font-black uppercase bg-white/10 px-2 py-0.5 rounded text-neutral-400">WebSocket Active</span>
               </div>
@@ -165,8 +166,8 @@ const TabCalls: React.FC<TabCallsProps> = ({ transcripts, callStatus, onCall, ac
                   transcripts.map((t, i) => (
                     <div key={i} className={`flex flex-col ${t.speaker === 'user' ? 'items-start' : 'items-end'} space-y-1`}>
                       <span className="text-[8px] font-black text-neutral-500 uppercase tracking-widest ml-1">{t.speaker === 'user' ? 'Caller' : 'AI Agent'}</span>
-                      <div className={`px-4 py-3 rounded-2xl text-xs font-semibold leading-relaxed max-w-[75%] shadow-sm ${
-                        t.speaker === 'user' ? 'bg-[#0a0a0a] border border-white/10 text-white rounded-tl-none' : 'bg-white text-black rounded-tr-none'
+                      <div className={`px-4 py-3 rounded-lg text-xs font-semibold leading-relaxed max-w-[75%] shadow-sm ${
+                        t.speaker === 'user' ? 'bg-white/[0.02] border border-white/10 text-white rounded-tl-none' : 'bg-white text-black rounded-tr-none'
                       }`}>
                         {t.text}
                       </div>
@@ -183,7 +184,7 @@ const TabCalls: React.FC<TabCallsProps> = ({ transcripts, callStatus, onCall, ac
 
               {/* Live Waveform placeholder */}
               {callStatus === 'connected' && (
-                <div className="p-6 border-t border-white/5 bg-[#0a0a0a]/50 flex gap-1 h-14 items-center justify-center overflow-hidden">
+                <div className="p-6 border-t border-white/5 bg-white/[0.01] flex gap-1 h-14 items-center justify-center overflow-hidden">
                   {Array.from({ length: 48 }).map((_, i) => (
                     <motion.div
                       key={i}
@@ -202,7 +203,7 @@ const TabCalls: React.FC<TabCallsProps> = ({ transcripts, callStatus, onCall, ac
             RECENT CALLS SUBPAGE
             ==================================================== */}
         {selectedSubpage === 'Recent Calls' && (
-          <div className="flex-1 p-8 overflow-y-auto scrollbar-hide">
+          <div className="flex-1 overflow-y-auto scrollbar-hide">
             <div className="max-w-5xl mx-auto space-y-6">
               <div className="flex justify-between items-start border-b border-white/5 pb-4">
                 <div>
@@ -211,10 +212,10 @@ const TabCalls: React.FC<TabCallsProps> = ({ transcripts, callStatus, onCall, ac
                 </div>
               </div>
 
-              <div className="bg-[#0a0a0a] border border-white/5 rounded-3xl overflow-hidden shadow-lg">
+              <div className="bg-white/[0.015] border border-white/[0.05] rounded-lg overflow-hidden shadow-lg">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-black/50 border-b border-white/5 text-[9px] font-black uppercase tracking-widest text-neutral-500">
+                    <tr className="bg-white/[0.02] border-b border-white/5 text-[9px] font-black uppercase tracking-widest text-neutral-500">
                       <th className="px-6 py-4">Number</th>
                       <th className="px-6 py-4">Agent</th>
                       <th className="px-6 py-4">Intent</th>
@@ -257,21 +258,21 @@ const TabCalls: React.FC<TabCallsProps> = ({ transcripts, callStatus, onCall, ac
             SCHEDULED CALLS SUBPAGE
             ==================================================== */}
         {selectedSubpage === 'Scheduled Calls' && (
-          <div className="flex-1 p-8 overflow-y-auto scrollbar-hide">
+          <div className="flex-1 overflow-y-auto scrollbar-hide">
             <div className="max-w-4xl mx-auto space-y-6">
               <div className="flex justify-between items-start">
                 <div>
                   <h3 className="text-sm font-black uppercase tracking-widest text-neutral-400 font-display">Scheduled Calls</h3>
                   <p className="text-[9px] text-neutral-500 font-bold uppercase mt-0.5">Queued outbound campaigns pending dialer windows</p>
                 </div>
-                <button className="px-4 py-2 bg-white text-black text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-neutral-100 transition-all cursor-pointer">
+                <button className="px-4 py-2 bg-white text-black text-[9px] font-black uppercase tracking-widest rounded-lg hover:bg-neutral-100 transition-all cursor-pointer">
                   Schedule Call
                 </button>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {scheduledCalls.map((sc) => (
-                  <div key={sc.id} className="p-6 bg-[#0a0a0a] border border-white/5 rounded-3xl flex flex-col justify-between shadow-lg">
+                  <div key={sc.id} className="p-6 bg-white/[0.015] border border-white/[0.05] rounded-lg flex flex-col justify-between shadow-lg">
                     <div className="space-y-3">
                       <div className="flex justify-between items-start">
                         <div className="flex items-center gap-2">
@@ -299,7 +300,7 @@ const TabCalls: React.FC<TabCallsProps> = ({ transcripts, callStatus, onCall, ac
             RECORDINGS SUBPAGE
             ==================================================== */}
         {selectedSubpage === 'Recordings' && (
-          <div className="flex-1 p-8 overflow-y-auto scrollbar-hide">
+          <div className="flex-1 overflow-y-auto scrollbar-hide">
             <div className="max-w-4xl mx-auto space-y-6">
               <div>
                 <h3 className="text-sm font-black uppercase tracking-widest text-neutral-400 font-display">Audio Recordings Library</h3>
@@ -308,9 +309,9 @@ const TabCalls: React.FC<TabCallsProps> = ({ transcripts, callStatus, onCall, ac
 
               <div className="space-y-4">
                 {callsData.slice(1).map((record) => (
-                  <div key={record.id} className="p-5 bg-[#0a0a0a] border border-white/5 rounded-3xl flex items-center justify-between shadow-lg">
+                  <div key={record.id} className="p-5 bg-white/[0.015] border border-white/[0.05] rounded-lg flex items-center justify-between shadow-lg">
                     <div className="flex items-center gap-4">
-                      <button className="w-10 h-10 rounded-2xl bg-white flex items-center justify-center text-black hover:bg-neutral-100 transition-all cursor-pointer">
+                      <button className="w-10 h-10 rounded-lg bg-white flex items-center justify-center text-black hover:bg-neutral-100 transition-all cursor-pointer">
                         <Play className="w-4 h-4" />
                       </button>
                       <div>
@@ -319,12 +320,12 @@ const TabCalls: React.FC<TabCallsProps> = ({ transcripts, callStatus, onCall, ac
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button className="p-2.5 bg-white/5 border border-white/5 rounded-xl hover:border-white/10 hover:bg-white/10 text-neutral-400 hover:text-white transition-all cursor-pointer">
+                      <button className="p-2.5 bg-white/5 border border-white/5 rounded-lg hover:border-white/10 hover:bg-white/10 text-neutral-400 hover:text-white transition-all cursor-pointer">
                         <Download className="w-4 h-4" />
                       </button>
                       <button 
                         onClick={() => setSelectedSubpage('Live Calls')}
-                        className="px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/5 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all text-neutral-400 hover:text-white cursor-pointer"
+                        className="px-3 py-2 bg-white/5 hover:bg-white/10 border border-white/5 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all text-neutral-400 hover:text-white cursor-pointer"
                       >
                         Inspect Transcript
                       </button>
@@ -340,7 +341,7 @@ const TabCalls: React.FC<TabCallsProps> = ({ transcripts, callStatus, onCall, ac
             CALL LOGS SUBPAGE
             ==================================================== */}
         {selectedSubpage === 'Call Logs' && (
-          <div className="flex-1 p-8 overflow-y-auto scrollbar-hide">
+          <div className="flex-1 overflow-y-auto scrollbar-hide">
             <div className="max-w-5xl mx-auto space-y-6">
               <div className="flex justify-between items-center">
                 <div>
@@ -348,7 +349,7 @@ const TabCalls: React.FC<TabCallsProps> = ({ transcripts, callStatus, onCall, ac
                   <p className="text-[9px] text-neutral-500 font-bold uppercase mt-0.5">Filterable telecom carrier events</p>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="flex bg-white/5 p-1 rounded-xl">
+                  <div className="flex bg-white/5 p-1 rounded-lg">
                     <button className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider bg-white text-black shadow-sm">All</button>
                     <button className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider text-neutral-500 hover:text-white bg-transparent border-none">Success</button>
                     <button className="px-3 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-wider text-neutral-500 hover:text-white bg-transparent border-none">Failed</button>
@@ -356,10 +357,10 @@ const TabCalls: React.FC<TabCallsProps> = ({ transcripts, callStatus, onCall, ac
                 </div>
               </div>
 
-              <div className="bg-[#0a0a0a] border border-white/5 rounded-3xl overflow-hidden shadow-lg">
+              <div className="bg-white/[0.015] border border-white/[0.05] rounded-lg overflow-hidden shadow-lg">
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="bg-black/50 border-b border-white/5 text-[9px] font-black uppercase tracking-widest text-neutral-500">
+                    <tr className="bg-white/[0.02] border-b border-white/5 text-[9px] font-black uppercase tracking-widest text-neutral-500">
                       <th className="px-6 py-4">Session ID</th>
                       <th className="px-6 py-4">Number</th>
                       <th className="px-6 py-4">Duration</th>

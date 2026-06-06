@@ -113,7 +113,7 @@ const Sidebar: React.FC<SidebarProps> = ({
   };
 
   return (
-    <aside className="w-60 border-r border-white/5 h-screen flex flex-col bg-[#070708] shrink-0 font-sans text-white">
+    <aside className="w-60 h-full flex flex-col bg-white/[0.015] border border-white/[0.05] backdrop-blur-2xl rounded-lg shrink-0 font-sans text-white shadow-2xl overflow-hidden">
       
       {/* Brand Header */}
       <div className="p-6 pb-4 flex items-center justify-between shrink-0 border-b border-white/5">
@@ -124,7 +124,7 @@ const Sidebar: React.FC<SidebarProps> = ({
       </div>
 
       {/* Main Nav Items (Scrollable when overflow) */}
-      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-1.5 scrollbar-hide">
+      <div className="flex-1 overflow-y-auto px-4 py-6 space-y-1.5 scrollbar-hide flex flex-col justify-between">
         <nav className="space-y-1">
           {menuConfig.map((item) => {
             const active = isItemActive(item);
@@ -132,9 +132,9 @@ const Sidebar: React.FC<SidebarProps> = ({
               <div key={item.name} className="space-y-1">
                 <button
                   onClick={() => handleParentClick(item)}
-                  className={`w-full flex items-center justify-between px-3 py-2 rounded-xl transition-all cursor-pointer ${
+                  className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-all cursor-pointer ${
                     active 
-                      ? 'bg-white/10 text-white font-bold' 
+                      ? 'bg-white/[0.06] backdrop-blur-md border border-white/[0.02] text-white font-bold shadow-sm' 
                       : 'text-neutral-400 hover:text-white hover:bg-white/5'
                   }`}
                 >
@@ -173,7 +173,7 @@ const Sidebar: React.FC<SidebarProps> = ({
         </nav>
 
         {/* AI System Status Widget placed inside the scroll area pushed to bottom */}
-        <div className="p-4 border border-white/5 rounded-2xl bg-[#0c0c0e]/80 space-y-2.5 mt-8">
+        <div className="p-4 border border-white/[0.05] rounded-lg bg-white/[0.02] backdrop-blur-2xl space-y-2.5 mt-8 shadow-sm">
           <div className="flex flex-col">
             <span className="text-[8px] font-bold text-neutral-500 uppercase tracking-widest leading-none">AI System Status</span>
             <div className="flex items-center gap-1.5 mt-2">
@@ -181,14 +181,43 @@ const Sidebar: React.FC<SidebarProps> = ({
               <span className="text-[10px] font-semibold text-neutral-300 uppercase tracking-wider leading-none">All systems operational</span>
             </div>
           </div>
-          <div className="h-6 w-full pt-1">
-            <svg viewBox="0 0 100 20" className="w-full h-full text-emerald-500/30" preserveAspectRatio="none">
+          <div className="h-10 w-full pt-1 relative">
+            <svg viewBox="0 0 100 25" className="w-full h-full overflow-visible" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="aiStatusGlow" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#10b981" stopOpacity="0.12" />
+                  <stop offset="100%" stopColor="#10b981" stopOpacity="0.0" />
+                </linearGradient>
+              </defs>
+              {/* Fill path under the spiky sparkline */}
               <path 
-                d="M 0 12 Q 15 5, 30 14 T 60 8 T 90 15 L 100 10" 
+                d="M 0 20 L 15 6 L 35 18 L 55 3 L 75 14 L 100 5 L 100 25 L 0 25 Z" 
+                fill="url(#aiStatusGlow)" 
+              />
+              {/* Stroke path of the spiky sparkline */}
+              <path 
+                d="M 0 20 L 15 6 L 35 18 L 55 3 L 75 14 L 100 5" 
                 fill="none" 
                 stroke="#10b981" 
                 strokeWidth="1.2" 
+                strokeLinecap="round"
+                strokeLinejoin="round"
               />
+              {/* Spiky, static highlighted points (glowing dots without animations, 20% higher glow than before) */}
+              <circle cx="15" cy="6" r="3.5" fill="#10b981" fillOpacity="0.22" />
+              <circle cx="15" cy="6" r="1" fill="#ffffff" fillOpacity="0.9" />
+
+              <circle cx="35" cy="18" r="3.5" fill="#10b981" fillOpacity="0.22" />
+              <circle cx="35" cy="18" r="1" fill="#ffffff" fillOpacity="0.9" />
+
+              <circle cx="55" cy="3" r="3.5" fill="#10b981" fillOpacity="0.22" />
+              <circle cx="55" cy="3" r="1" fill="#ffffff" fillOpacity="0.9" />
+
+              <circle cx="75" cy="14" r="3.5" fill="#10b981" fillOpacity="0.22" />
+              <circle cx="75" cy="14" r="1" fill="#ffffff" fillOpacity="0.9" />
+
+              <circle cx="100" cy="5" r="3.5" fill="#10b981" fillOpacity="0.22" />
+              <circle cx="100" cy="5" r="1" fill="#ffffff" fillOpacity="0.9" />
             </svg>
           </div>
         </div>

@@ -31,6 +31,46 @@ export default function WorkspacePage() {
   const [targetUser, setTargetUser] = useState<any>(null);
   const [entities, setEntities] = useState<any[]>([]);
 
+  // Stable component-level entity fetcher
+  const fetchEntities = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      const userIdQuery = targetUser ? `?userId=${targetUser._id}` : '';
+      const response = await fetch(`${BACKEND_URL}/entities${userIdQuery}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setEntities(data);
+        if (data.length > 0 && !activeEntity) {
+          setActiveEntity(data[0].name);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching entities:', err);
+    }
+  };
+
+  // Stable component-level analytics fetcher
+  const fetchAnalytics = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) return;
+      const userIdQuery = targetUser ? `?userId=${targetUser._id}` : '';
+      const endpoint = targetUser ? `/analytics` : '/analytics';
+      const response = await fetch(`${BACKEND_URL}${endpoint}${userIdQuery}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      setAnalyticsData(Array.isArray(data) ? data : [data]);
+    } catch (err) {
+      console.error('Error fetching analytics:', err);
+    }
+  };
+
   useEffect(() => {
     const token = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
@@ -44,45 +84,10 @@ export default function WorkspacePage() {
       setUser(JSON.parse(storedUser));
     }
 
-    // Context-aware Entity Fetcher
-    const fetchEntities = async () => {
-      try {
-        const userIdQuery = targetUser ? `?userId=${targetUser._id}` : '';
-        const response = await fetch(`${BACKEND_URL}/entities${userIdQuery}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        });
-        const data = await response.json();
-        if (response.ok) {
-          setEntities(data);
-          if (data.length > 0 && !activeEntity) {
-            setActiveEntity(data[0].name);
-          }
-        }
-      } catch (err) {
-        console.error('Error fetching entities:', err);
-      }
-    };
     fetchEntities();
-
-    // 1. Fetch Initial Analytics
-    const fetchAnalytics = async () => {
-      try {
-        const userIdQuery = targetUser ? `?userId=${targetUser._id}` : '';
-        const endpoint = targetUser ? `/analytics` : '/analytics';
-        const response = await fetch(`${BACKEND_URL}${endpoint}${userIdQuery}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await response.json();
-        setAnalyticsData(Array.isArray(data) ? data : [data]);
-      } catch (err) {
-        console.error('Error fetching analytics:', err);
-      }
-    };
     fetchAnalytics();
 
-    // 2. Build the live WebSocket URL
+    // Build the live WebSocket URL
     const protocol = BACKEND_URL.startsWith('https') ? 'wss' : 'ws';
     const cleanUrl = BACKEND_URL.replace(/^https?:\/\//, '').replace(/\/$/, '');
     const wsUrl = `${protocol}://${cleanUrl}/live`;
@@ -171,12 +176,23 @@ export default function WorkspacePage() {
     }
   };
 
+  const handleHangup = () => {
+    setCallStatus('idle');
+  };
+
   const handleNewEntity = () => {
     setIsModalOpen(true);
   };
 
   return (
-    <div className="flex flex-col h-screen w-full overflow-hidden bg-black">
+    <div className="flex flex-col h-screen w-full overflow-hidden bg-black relative">
+      {/* Decorative vertical & horizontal background grid - slightly more visible */}
+      <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(0deg,rgba(255,255,255,0.035)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none z-0" />
+      
+      {/* Static white glows matching referenceimage.jpeg */}
+      <div className="absolute top-[10%] left-[25%] w-[800px] h-[600px] bg-white/[0.025] blur-[150px] rounded-full pointer-events-none z-0" />
+      <div className="absolute bottom-[10%] right-[10%] w-[600px] h-[600px] bg-white/[0.015] blur-[120px] rounded-full pointer-events-none z-0" />
+
       {/* Admin Impersonation Banner */}
       {targetUser && (
         <div className="bg-emerald-600 px-4 py-1.5 flex items-center justify-between text-white text-[11px] font-bold uppercase tracking-widest z-50">
@@ -193,7 +209,7 @@ export default function WorkspacePage() {
         </div>
       )}
 
-      <div className="flex flex-1 overflow-hidden">
+      <div className="flex flex-1 overflow-hidden p-4 gap-4 relative z-10 bg-transparent">
         <Sidebar 
           activeTab={activeTab} 
           setActiveTab={setActiveTab} 
@@ -207,12 +223,15 @@ export default function WorkspacePage() {
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           activeEntity={activeEntity}
+          setActiveEntity={setActiveEntity}
           transcripts={transcripts}
           callStatus={callStatus}
           onCall={handleCall}
+          onHangup={handleHangup}
           analyticsData={analyticsData}
           onImpersonate={handleImpersonate}
           entities={entities}
+          fetchEntities={fetchEntities}
         />
       </div>
 

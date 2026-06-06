@@ -72,8 +72,8 @@ const TabAnalytics: React.FC<TabAnalyticsProps> = ({ analyticsData, isGlobal, ac
   ];
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-black p-8 overflow-y-auto scrollbar-hide text-white">
-      <div className="max-w-6xl mx-auto w-full space-y-12 pb-16">
+    <div className="flex-1 flex flex-col min-w-0 bg-transparent p-6 overflow-y-auto scrollbar-hide text-white">
+      <div className="max-w-6xl mx-auto w-full space-y-8 pb-16">
         
         {/* Title */}
         <div>
@@ -84,9 +84,9 @@ const TabAnalytics: React.FC<TabAnalyticsProps> = ({ analyticsData, isGlobal, ac
         {/* Stats Grid */}
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           {stats.map((stat, idx) => (
-            <div key={idx} className="p-6 border border-white/5 rounded-3xl bg-[#0a0a0a] shadow-lg hover:border-white/20 transition-all group">
+            <div key={idx} className="p-6 border border-white/[0.05] rounded-lg bg-white/[0.015] shadow-lg hover:border-white/20 transition-all group">
               <div className="flex justify-between items-start mb-4">
-                <div className={`p-2.5 rounded-xl bg-black border border-white/10 text-white group-hover:scale-110 transition-transform`}>
+                <div className={`p-2.5 rounded-lg bg-white/5 border border-white/10 text-white group-hover:scale-110 transition-transform`}>
                   <stat.icon className="w-5 h-5" />
                 </div>
                 <div className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${
@@ -110,10 +110,10 @@ const TabAnalytics: React.FC<TabAnalyticsProps> = ({ analyticsData, isGlobal, ac
             
             <div className="space-y-4">
               {recentSummaries.map((s) => (
-                <div key={s.id} className="p-6 border border-white/5 rounded-3xl hover:border-white/25 transition-all bg-[#0a0a0a] shadow-lg space-y-4 group">
+                <div key={s.id} className="p-6 border border-white/[0.05] rounded-lg hover:border-white/25 transition-all bg-white/[0.015] shadow-lg space-y-4 group">
                   <div className="flex justify-between items-start">
                     <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-xl bg-black flex items-center justify-center border border-white/10">
+                      <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center border border-white/10">
                         <MessageSquare className="w-4 h-4 text-neutral-400" />
                       </div>
                       <div>
@@ -124,7 +124,7 @@ const TabAnalytics: React.FC<TabAnalyticsProps> = ({ analyticsData, isGlobal, ac
                     <span className="text-[10px] font-bold text-neutral-500">{s.time}</span>
                   </div>
                   
-                  <div className="bg-black p-4 rounded-2xl border border-white/10">
+                  <div className="bg-black/40 p-4 rounded-lg border border-white/10">
                     <p className="text-xs font-semibold leading-relaxed text-neutral-300 italic">"{s.text}"</p>
                   </div>
                   
@@ -141,7 +141,7 @@ const TabAnalytics: React.FC<TabAnalyticsProps> = ({ analyticsData, isGlobal, ac
           <div className="space-y-6">
             <h3 className="text-xs font-black uppercase tracking-widest text-neutral-500 px-2 font-display">Voice Gateway Telemetry</h3>
             
-            <div className="p-6 bg-[#0a0a0a] border border-white/5 rounded-[2rem] shadow-xl text-white space-y-6 relative overflow-hidden">
+            <div className="p-6 bg-white/[0.015] border border-white/[0.05] rounded-lg shadow-xl text-white space-y-6 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl pointer-events-none" />
               <div className="flex justify-between items-center text-white">
                 <span className="text-[9px] font-black uppercase tracking-widest opacity-60">System Intent Split</span>
@@ -169,7 +169,7 @@ const TabAnalytics: React.FC<TabAnalyticsProps> = ({ analyticsData, isGlobal, ac
             </div>
 
             {/* Quality assurance latency tracker */}
-            <div className="p-6 border border-white/5 rounded-[2rem] bg-[#0a0a0a] space-y-4">
+            <div className="p-6 border border-white/[0.05] rounded-lg bg-white/[0.015] space-y-4">
               <div className="flex items-center gap-2">
                 <Layers className="w-4 h-4 text-emerald-400" />
                 <h3 className="text-[10px] font-black uppercase tracking-widest text-white leading-none font-display">Response Speed Benchmarks</h3>

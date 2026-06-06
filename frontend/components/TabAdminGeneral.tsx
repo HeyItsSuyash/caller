@@ -48,7 +48,7 @@ const TabAdminGeneral: React.FC<TabAdminGeneralProps> = ({ type, title }) => {
   const Icon = icons[type];
 
   return (
-    <div className="p-8 h-full bg-black overflow-y-auto text-white">
+    <div className="p-8 h-full bg-transparent overflow-y-auto text-white">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h2 className="text-xl font-black tracking-tight mb-1 text-white font-display uppercase italic">{title}</h2>

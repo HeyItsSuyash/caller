@@ -100,10 +100,7 @@ const TabOverview: React.FC<TabOverviewProps> = ({ analyticsData, callStatus, tr
   ];
 
   return (
-    <div className="min-w-0 bg-[#070708] p-8 font-sans text-white relative overflow-y-auto h-full scrollbar-hide">
-      
-      {/* Decorative background grid */}
-      <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none opacity-60" />
+    <div className="min-w-0 bg-transparent p-8 font-sans text-white relative overflow-y-auto h-full scrollbar-hide">
 
       <div className="max-w-[1600px] mx-auto w-full relative z-10">
         
@@ -124,7 +121,7 @@ const TabOverview: React.FC<TabOverviewProps> = ({ analyticsData, callStatus, tr
               {stats.map((stat, idx) => (
                 <div 
                   key={idx}
-                  className="p-4 border border-white/5 rounded-2xl bg-[#0c0c0e] flex flex-col justify-between hover:border-white/10 transition-all shadow-sm"
+                  className="p-4 border border-white/[0.05] rounded-lg bg-white/[0.02] backdrop-blur-2xl flex flex-col justify-between hover:border-white/10 transition-all shadow-sm"
                 >
                   <div className="space-y-1.5">
                     <p className="text-[8px] font-black uppercase tracking-wider text-neutral-500">{stat.label}</p>
@@ -163,32 +160,34 @@ const TabOverview: React.FC<TabOverviewProps> = ({ analyticsData, callStatus, tr
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               
               {/* Performance LineChart Card */}
-              <div className="border border-white/5 rounded-3xl p-5 bg-[#0c0c0e] flex flex-col justify-between h-[280px]">
+              <div className="border border-white/[0.05] rounded-lg p-5 bg-white/[0.02] backdrop-blur-2xl flex flex-col justify-between h-[310px]">
                 <div className="mb-4 flex justify-between items-center">
                   <div>
                     <h3 className="text-[10px] font-black uppercase tracking-wider text-neutral-400 font-display">Performance Overview</h3>
                     <p className="text-[8.5px] text-neutral-500 font-bold uppercase mt-0.5">This week vs last week</p>
                   </div>
-                  <div className="flex gap-3 text-[9px] font-semibold text-neutral-400">
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
-                      <span>Calls</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#3b82f6]" />
-                      <span>Connected</span>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]" />
-                      <span>Meetings</span>
+                  <div className="flex flex-col items-end gap-1">
+                    <div className="flex gap-3 text-[9px] font-semibold text-neutral-400">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#10b981]" />
+                        <span>Calls (1,248)</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#3b82f6]" />
+                        <span>Connected (980)</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-1.5 h-1.5 rounded-full bg-[#8b5cf6]" />
+                        <span>Meetings (320)</span>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div className="h-44 w-full">
+                <div className="h-52 w-full">
                   {mounted ? (
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={lineChartData} margin={{ top: 5, right: 10, left: -25, bottom: 0 }}>
+                      <LineChart data={lineChartData} margin={{ top: 0, right: 10, left: -25, bottom: 0 }}>
                         <CartesianGrid stroke="#1c1c1f" vertical={false} />
                         <XAxis dataKey="name" tick={{ fontSize: 9, fill: '#737373', fontWeight: 'bold' }} stroke="#262626" />
                         <YAxis 
@@ -205,13 +204,13 @@ const TabOverview: React.FC<TabOverviewProps> = ({ analyticsData, callStatus, tr
                       </LineChart>
                     </ResponsiveContainer>
                   ) : (
-                    <div className="w-full h-full bg-black/50 animate-pulse rounded-2xl" />
+                    <div className="w-full h-full bg-black/50 animate-pulse rounded-lg" />
                   )}
                 </div>
               </div>
 
               {/* Conversion Funnel Card */}
-              <div className="border border-white/5 rounded-3xl p-5 bg-[#0c0c0e] flex flex-col justify-between h-[280px]">
+              <div className="border border-white/[0.05] rounded-lg p-5 bg-white/[0.02] backdrop-blur-2xl flex flex-col justify-between h-[310px]">
                 <div>
                   <h3 className="text-[10px] font-black uppercase tracking-wider text-neutral-400 font-display">Conversion Funnel</h3>
                   <p className="text-[8.5px] text-neutral-500 font-bold uppercase mt-0.5">This week</p>
@@ -282,7 +281,7 @@ const TabOverview: React.FC<TabOverviewProps> = ({ analyticsData, callStatus, tr
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               
               {/* Top AI Agents Table Card */}
-              <div className="border border-white/5 rounded-3xl p-5 bg-[#0c0c0e] flex flex-col justify-between min-h-[290px]">
+              <div className="border border-white/[0.05] rounded-lg p-5 bg-white/[0.02] backdrop-blur-2xl flex flex-col justify-between min-h-[310px]">
                 <div>
                   <h3 className="text-[10px] font-black uppercase tracking-wider text-neutral-400 font-display mb-1">Top AI Agents</h3>
                   <p className="text-[8px] text-neutral-500 font-bold uppercase mb-3.5">By performance</p>
@@ -326,7 +325,7 @@ const TabOverview: React.FC<TabOverviewProps> = ({ analyticsData, callStatus, tr
               </div>
 
               {/* AI Insights Card */}
-              <div className="border border-white/5 rounded-3xl p-5 bg-[#0c0c0e] flex flex-col justify-between min-h-[290px]">
+              <div className="border border-white/[0.05] rounded-lg p-5 bg-white/[0.02] backdrop-blur-2xl flex flex-col justify-between min-h-[310px]">
                 <div>
                   <h3 className="text-[10px] font-black uppercase tracking-wider text-neutral-400 font-display mb-1">AI Insights</h3>
                   <p className="text-[8px] text-neutral-500 font-bold uppercase mb-4">What's happening with your conversations</p>
@@ -335,9 +334,9 @@ const TabOverview: React.FC<TabOverviewProps> = ({ analyticsData, callStatus, tr
                     {aiInsights.map((insight, i) => {
                       const IconComp = insight.icon;
                       return (
-                        <div key={i} className="flex items-center justify-between hover:bg-white/[0.01] p-1.5 rounded-xl transition-all cursor-pointer">
+                        <div key={i} className="flex items-center justify-between hover:bg-white/[0.01] p-1.5 rounded-lg transition-all cursor-pointer">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-xl bg-emerald-500/5 border border-emerald-500/10 flex items-center justify-center text-emerald-400 shrink-0">
+                            <div className="w-8 h-8 rounded-lg bg-emerald-500/5 border border-emerald-500/10 flex items-center justify-center text-emerald-400 shrink-0">
                               <IconComp className="w-4.5 h-4.5" />
                             </div>
                             <div className="leading-tight">
@@ -352,19 +351,19 @@ const TabOverview: React.FC<TabOverviewProps> = ({ analyticsData, callStatus, tr
                   </div>
                 </div>
               </div>
-
+ 
               {/* Revenue Impact (Bar Chart) */}
-              <div className="border border-white/5 rounded-3xl p-5 bg-[#0c0c0e] flex flex-col justify-between min-h-[290px]">
+              <div className="border border-white/[0.05] rounded-lg p-5 bg-white/[0.02] backdrop-blur-2xl flex flex-col justify-between min-h-[310px]">
                 <div>
                   <h3 className="text-[10px] font-black uppercase tracking-wider text-neutral-400 font-display">Revenue Impact</h3>
                   <p className="text-[8.5px] text-neutral-500 font-bold uppercase mt-0.5">This month</p>
                 </div>
-
+ 
                 <div className="my-2.5">
                   <h2 className="text-2xl font-black text-white leading-none tracking-tight">₹12,40,000</h2>
                   <p className="text-[8px] text-neutral-500 font-bold uppercase mt-1">Total revenue influenced</p>
                 </div>
-
+ 
                 <div className="grid grid-cols-2 gap-2 pb-2 border-b border-white/5 text-[9.5px]">
                   <div>
                     <span className="text-[7.5px] text-neutral-500 font-bold uppercase block">Deals Influenced</span>
@@ -375,8 +374,8 @@ const TabOverview: React.FC<TabOverviewProps> = ({ analyticsData, callStatus, tr
                     <span className="font-extrabold text-white font-mono">₹32.5M</span>
                   </div>
                 </div>
-
-                <div className="h-16 w-full pt-2">
+ 
+                <div className="h-24 w-full pt-2">
                   {mounted ? (
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart data={revenueChartData} margin={{ top: 0, right: 0, left: -30, bottom: 0 }}>
@@ -392,20 +391,20 @@ const TabOverview: React.FC<TabOverviewProps> = ({ analyticsData, callStatus, tr
                       </BarChart>
                     </ResponsiveContainer>
                   ) : (
-                    <div className="w-full h-full bg-black/50 animate-pulse rounded-xl" />
+                    <div className="w-full h-full bg-black/50 animate-pulse rounded-lg" />
                   )}
                 </div>
               </div>
-
+ 
             </div>
-
+ 
           </div>
-
+ 
           {/* RIGHT SIDEBAR PANEL: System Feed & Attention Center (Col 10-12) */}
           <div className="lg:col-span-3 space-y-6">
             
             {/* Live System Feed */}
-            <div className="border border-white/5 rounded-3xl p-5 bg-[#0c0c0e] shadow-lg flex flex-col justify-between min-h-[320px]">
+            <div className="border border-white/[0.05] rounded-lg p-5 bg-white/[0.02] backdrop-blur-2xl shadow-lg flex flex-col justify-between min-h-[320px]">
               <div>
                 <div className="flex justify-between items-center mb-1">
                   <h3 className="text-[10px] font-black uppercase tracking-wider text-neutral-400 font-display">Live System Feed</h3>
@@ -425,10 +424,10 @@ const TabOverview: React.FC<TabOverviewProps> = ({ analyticsData, callStatus, tr
                   ))}
                 </div>
               </div>
-
+ 
               <button 
                 onClick={() => setActiveTab && setActiveTab('Calls - Live Calls')}
-                className="w-full py-2 bg-[#070708] border border-white/5 hover:border-white/10 rounded-xl text-[8px] font-black uppercase tracking-widest text-neutral-400 hover:text-white transition-all mt-4 cursor-pointer flex items-center justify-between px-3"
+                className="w-full py-2 bg-white/[0.02] backdrop-blur-md border border-white/[0.05] hover:border-white/10 rounded-lg text-[8px] font-black uppercase tracking-widest text-neutral-400 hover:text-white transition-all mt-4 cursor-pointer flex items-center justify-between px-3"
               >
                 <span>View all activity</span>
                 <span>→</span>
@@ -436,21 +435,21 @@ const TabOverview: React.FC<TabOverviewProps> = ({ analyticsData, callStatus, tr
             </div>
 
             {/* Attention Required Action Center */}
-            <div className="border border-white/5 rounded-3xl p-5 bg-[#0c0c0e] shadow-lg flex flex-col justify-between min-h-[320px]">
+            <div className="border border-white/[0.05] rounded-lg p-4 bg-white/[0.02] backdrop-blur-2xl shadow-lg flex flex-col justify-between min-h-[260px]">
               <div>
                 <h3 className="text-[10px] font-black uppercase tracking-wider text-neutral-400 font-display mb-1">Attention Required</h3>
-                <p className="text-[8px] text-neutral-500 font-bold uppercase mb-4">Critical actions</p>
+                <p className="text-[8px] text-neutral-500 font-bold uppercase mb-3">Critical actions</p>
                 
-                <div className="space-y-2.5">
+                <div className="space-y-2">
                   {attentionRequired.map((item, i) => (
                     <div 
                       key={i} 
-                      className={`flex items-center gap-3 p-3 rounded-2xl border ${item.color} cursor-pointer hover:scale-[1.01] transition-all`}
+                      className={`flex items-center gap-3 p-2 rounded-lg border ${item.color} cursor-pointer hover:scale-[1.01] transition-all`}
                     >
-                      <item.icon className="w-4 h-4 shrink-0" />
+                      <item.icon className="w-3.5 h-3.5 shrink-0" />
                       <div>
-                        <h4 className="text-[10px] font-bold leading-none text-white">{item.title}</h4>
-                        <p className="text-[8px] opacity-75 font-semibold mt-1 leading-none text-neutral-400">{item.desc}</p>
+                        <h4 className="text-[9.5px] font-bold leading-none text-white">{item.title}</h4>
+                        <p className="text-[7.5px] opacity-75 font-semibold mt-0.5 leading-none text-neutral-400">{item.desc}</p>
                       </div>
                     </div>
                   ))}
@@ -459,7 +458,7 @@ const TabOverview: React.FC<TabOverviewProps> = ({ analyticsData, callStatus, tr
 
               <button 
                 onClick={() => setActiveTab && setActiveTab('Contacts')}
-                className="w-full py-2 bg-[#070708] border border-white/5 hover:border-white/10 rounded-xl text-[8px] font-black uppercase tracking-widest text-neutral-400 hover:text-white transition-all mt-4 cursor-pointer flex items-center justify-between px-3"
+                className="w-full py-2 bg-white/[0.02] backdrop-blur-md border border-white/[0.05] hover:border-white/10 rounded-lg text-[8px] font-black uppercase tracking-widest text-neutral-400 hover:text-white transition-all mt-3 cursor-pointer flex items-center justify-between px-3"
               >
                 <span>View all</span>
                 <span>→</span>

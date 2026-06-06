@@ -2,19 +2,38 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { Activity, User, Building2, ChevronRight, CheckCircle2, AlertCircle } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Mail, Lock, User, Building2, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import AuthFormLayout from '@/components/auth/AuthFormLayout';
+import Globe3DDemo from '@/components/3d-globe-demo';
+import GlobeTelemetry from '@/components/auth/GlobeTelemetry';
+import AuthTelemetry from '@/components/auth/AuthTelemetry';
+
+const getBackendUrl = () => {
+  if (process.env.NEXT_PUBLIC_BACKEND_URL) return process.env.NEXT_PUBLIC_BACKEND_URL;
+  if (typeof window !== 'undefined') {
+    if (window.location.hostname.includes('caller.work')) {
+      return 'https://caller-24ie.onrender.com';
+    }
+  }
+  return 'http://127.0.0.1:3001';
+};
+
+const BACKEND_URL = getBackendUrl();
 
 export default function SignupPage() {
+  const router = useRouter();
   const [accountType, setAccountType] = useState<'personal' | 'agency'>('personal');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:3001';
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!name || !email || !password) return;
     setError('');
     setLoading(true);
 
@@ -31,7 +50,6 @@ export default function SignupPage() {
         throw new Error(data.error || 'Signup failed');
       }
 
-      // Store token and user info
       localStorage.setItem('token', data.token);
       localStorage.setItem('user', JSON.stringify(data.user));
 
@@ -44,119 +62,152 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#fafafa] flex flex-col items-center justify-center p-6 font-sans antialiased text-black">
-      <div className="w-full max-w-[440px] bg-white p-10 rounded-[32px] border border-black/5 shadow-[0_32px_64px_-16px_rgba(0,0,0,0.08)] space-y-10 animate-in fade-in zoom-in duration-700">
-        <div className="flex flex-col items-center gap-6 text-center">
-          <div className="w-14 h-14 rounded-2xl bg-black flex items-center justify-center shadow-xl transform skew-y-3 hover:skew-y-0 transition-transform duration-500">
-            <Activity className="text-white w-7 h-7" />
-          </div>
-          <div className="space-y-2">
-            <h1 className="text-3xl font-black tracking-tighter uppercase leading-none">Caller AI</h1>
-            <p className="text-[10px] font-bold text-secondary uppercase tracking-[0.4em] opacity-50">Initialize New Workspace</p>
-          </div>
+    <AuthFormLayout
+      globe={<Globe3DDemo />}
+      telemetry={<GlobeTelemetry />}
+    >
+      <div className="space-y-3.5">
+        {/* logo */}
+        <div className="flex items-center gap-1.5 mb-1">
+          <span className="font-extrabold text-[14px] tracking-tight text-white font-display">caller.work</span>
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
         </div>
 
-        <form onSubmit={handleSignup} className="space-y-8">
-          {error && (
-            <div className="p-4 bg-red-50/50 border border-red-100 text-red-600 rounded-2xl text-[11px] font-bold flex items-center gap-3 animate-in shake duration-300">
-              <AlertCircle className="w-4 h-4" />
-              <span>{error}</span>
-            </div>
-          )}
+        {/* Subheader */}
+        <p className="text-neutral-500 text-[10px] font-bold leading-tight max-w-xs uppercase tracking-wider">
+          Professional communications infrastructure for modern organizations.
+        </p>
 
-          <div className="space-y-6">
-            <div className="grid grid-cols-2 gap-4">
-              <div 
-                onClick={() => setAccountType('personal')}
-                className={`p-5 border rounded-[20px] cursor-pointer transition-all flex flex-col gap-4 relative overflow-hidden group ${
-                  accountType === 'personal' ? 'border-black bg-black/[0.02] ring-1 ring-black' : 'border-black/5 hover:border-black/20 bg-[#fbfbfb]'
-                }`}
-              >
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${accountType === 'personal' ? 'bg-black text-white' : 'bg-white text-secondary'}`}>
-                  <User className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="text-[11px] font-black uppercase tracking-wider">Personal</p>
-                  <p className="text-[9px] text-secondary/60 font-bold uppercase tracking-tighter">Individual</p>
-                </div>
-                {accountType === 'personal' && <CheckCircle2 className="w-4 h-4 absolute top-4 right-4 text-black" />}
+        {/* Heading */}
+        <div className="space-y-1 mb-2">
+          <h1 className="text-2xl lg:text-[28px] font-extrabold tracking-tight text-white leading-tight font-display">
+            Initialize Workspace.<br />Scale Your Operations.
+          </h1>
+          <p className="text-neutral-500 text-[10.5px] font-semibold max-w-sm leading-relaxed">
+            Register your workspace identity to coordinate outbound sales and automated voice agents.
+          </p>
+        </div>
+
+        {/* Form container */}
+        <div className="max-w-md w-full space-y-2.5">
+          
+          {/* Account Type Selector */}
+          <div className="grid grid-cols-2 gap-2">
+            <div 
+              onClick={() => setAccountType('personal')}
+              className={`p-2 border rounded-lg cursor-pointer transition-all flex items-center gap-3 relative overflow-hidden group ${
+                accountType === 'personal' ? 'border-white bg-white/[0.05]' : 'border-white/30 bg-white/[0.015] hover:border-white/45'
+              }`}
+            >
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-white/[0.05] text-neutral-300">
+                <User className="w-4 h-4" />
               </div>
-              <div 
-                onClick={() => setAccountType('agency')}
-                className={`p-5 border rounded-[20px] cursor-pointer transition-all flex flex-col gap-4 relative overflow-hidden group ${
-                  accountType === 'agency' ? 'border-black bg-black/[0.02] ring-1 ring-black' : 'border-border hover:border-black/30 bg-[#fbfbfb]'
-                }`}
-              >
-                <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors ${accountType === 'agency' ? 'bg-black text-white' : 'bg-white text-secondary'}`}>
-                  <Building2 className="w-5 h-5" />
-                </div>
-                <div>
-                  <p className="text-[11px] font-black uppercase tracking-wider">Agency</p>
-                  <p className="text-[9px] text-secondary/60 font-bold uppercase tracking-tighter">Enterprise</p>
-                </div>
-                {accountType === 'agency' && <CheckCircle2 className="w-4 h-4 absolute top-4 right-4 text-black" />}
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-wider">Personal</p>
+                <p className="text-[8px] text-neutral-500 font-bold uppercase tracking-tighter">Individual</p>
               </div>
             </div>
-
-            <div className="space-y-4">
-              <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary opacity-70 px-1">Identity Name</label>
-                <input 
-                  type="text" 
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="Full Name" 
-                  required
-                  className="w-full py-4 px-5 bg-[#f9f9f9] border border-transparent rounded-2xl focus:bg-white focus:border-black/10 focus:ring-4 focus:ring-black/5 outline-none text-sm transition-all disabled:opacity-50 font-medium placeholder:text-neutral-400" 
-                />
+            
+            <div 
+              onClick={() => setAccountType('agency')}
+              className={`p-2 border rounded-lg cursor-pointer transition-all flex items-center gap-3 relative overflow-hidden group ${
+                accountType === 'agency' ? 'border-white bg-white/[0.05]' : 'border-white/30 bg-white/[0.015] hover:border-white/45'
+              }`}
+            >
+              <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-white/[0.05] text-neutral-300">
+                <Building2 className="w-4 h-4" />
               </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary opacity-70 px-1">Workspace Email</label>
-                <input 
-                  type="email" 
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@company.com" 
-                  required
-                  className="w-full py-4 px-5 bg-[#f9f9f9] border border-transparent rounded-2xl focus:bg-white focus:border-black/10 focus:ring-4 focus:ring-black/5 outline-none text-sm transition-all disabled:opacity-50 font-medium placeholder:text-neutral-400" 
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-[10px] font-black uppercase tracking-[0.2em] text-secondary opacity-70 px-1">Access Key</label>
-                <input 
-                  type="password" 
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Create strong password" 
-                  required
-                  className="w-full py-4 px-5 bg-[#f9f9f9] border border-transparent rounded-2xl focus:bg-white focus:border-black/10 focus:ring-4 focus:ring-black/5 outline-none text-sm transition-all disabled:opacity-50 font-medium placeholder:text-neutral-400" 
-                />
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-wider">Agency</p>
+                <p className="text-[8px] text-neutral-500 font-bold uppercase tracking-tighter">Enterprise</p>
               </div>
             </div>
           </div>
 
-          <button 
-            type="submit"
-            disabled={loading}
-            className="w-full h-[54px] bg-black text-white rounded-2xl text-[11px] font-black uppercase tracking-[0.2em] hover:bg-neutral-800 active:scale-[0.98] shadow-[0_20px_40px_-12px_rgba(0,0,0,0.2)] transition-all flex items-center justify-center gap-2 group disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <span>{loading ? 'Initializing...' : 'Establish Workspace'}</span>
-            {!loading && (
-              <div className="pt-0.5">
-                <ChevronRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+          {/* Divider */}
+          <div className="flex items-center justify-center gap-3 text-[8px] font-black text-neutral-600 uppercase tracking-widest py-0.5">
+            <div className="flex-1 h-[1px] bg-white/30" />
+            <span>or register with credentials</span>
+            <div className="flex-1 h-[1px] bg-white/30" />
+          </div>
+
+          {/* Core Credentials Signup Form */}
+          <form onSubmit={handleSignup} className="space-y-1.5">
+            {error && (
+              <div className="p-2 bg-rose-500/10 border border-rose-500/30 text-rose-400 rounded-lg text-[10px] font-bold flex items-center gap-2.5 animate-in fade-in slide-in-from-top-1">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>{error}</span>
               </div>
             )}
-          </button>
-        </form>
 
-        <div className="text-center text-[11px] font-medium text-secondary pt-4 border-t border-black/[0.04]">
-          Managed entity already exists? <Link href="/login" className="text-black font-black hover:underline underline-offset-4 decoration-2">Sign In</Link>
+            <div className="relative">
+              <User className="w-3.5 h-3.5 text-neutral-600 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input 
+                type="text" 
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Identity Name"
+                required
+                className="w-full bg-white/[0.015] border border-white/30 rounded-lg pl-10 pr-4 py-1.5 text-[11px] text-white placeholder-neutral-600 focus:outline-none focus:border-white/45 font-semibold"
+              />
+            </div>
+
+            <div className="relative">
+              <Mail className="w-3.5 h-3.5 text-neutral-600 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input 
+                type="email" 
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="Email address"
+                required
+                className="w-full bg-white/[0.015] border border-white/30 rounded-lg pl-10 pr-4 py-1.5 text-[11px] text-white placeholder-neutral-600 focus:outline-none focus:border-white/45 font-semibold"
+              />
+            </div>
+
+            <div className="relative">
+              <Lock className="w-3.5 h-3.5 text-neutral-600 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input 
+                type={showPassword ? 'text' : 'password'} 
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="Access Key Password"
+                required
+                className="w-full bg-white/[0.015] border border-white/30 rounded-lg pl-10 pr-10 py-1.5 text-[11px] text-white placeholder-neutral-600 focus:outline-none focus:border-white/45 font-semibold"
+              />
+              <button 
+                type="button" 
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-600 hover:text-white transition-colors cursor-pointer"
+              >
+                {showPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+              </button>
+            </div>
+
+            <button 
+              type="submit" 
+              disabled={loading}
+              className="w-full py-1.5 bg-white/[0.03] hover:bg-white/5 text-white font-extrabold text-[9px] uppercase tracking-wider rounded-lg border border-white/30 hover:border-white/45 transition-all cursor-pointer disabled:opacity-50"
+            >
+              {loading ? 'Initializing...' : 'Continue'}
+            </button>
+          </form>
+
+          {/* Links */}
+          <div className="text-center text-[9px] font-bold text-neutral-500 uppercase tracking-widest pt-1">
+            Already have an account? <Link href="/login" className="text-white hover:underline">Sign In</Link>
+          </div>
+
         </div>
+
+        {/* Telemetry statistics & Partner badges */}
+        <AuthTelemetry />
       </div>
-      
-      <div className="mt-12 text-[9px] font-black text-secondary/30 uppercase tracking-[0.4em]">
-        SYSTEM CORE • SECURE REGISTRATION
+
+      {/* Footer links */}
+      <div className="flex gap-4 text-[9px] font-bold text-neutral-600 uppercase tracking-widest mt-2 z-10 relative">
+        <Link href="#" className="hover:text-white transition-colors">Terms</Link>
+        <Link href="#" className="hover:text-white transition-colors">Privacy</Link>
       </div>
-    </div>
+    </AuthFormLayout>
   );
 }

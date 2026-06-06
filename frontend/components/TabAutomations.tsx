@@ -51,15 +51,15 @@ const TabAutomations: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-black p-8 overflow-y-auto scrollbar-hide text-white">
+    <div className="flex-1 flex flex-col min-w-0 bg-transparent p-8 overflow-y-auto scrollbar-hide text-white">
       <div className="max-w-6xl mx-auto w-full space-y-8 pb-16 relative">
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:40px_40px] pointer-events-none opacity-30" />
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.012)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.012)_1px,transparent_1px)] bg-[size:32px_32px] pointer-events-none opacity-30" />
 
         {/* Title */}
         <div className="flex justify-between items-center border-b border-white/5 pb-6">
           <div>
-            <h1 className="text-2xl font-black tracking-tighter uppercase italic text-white font-display">Trigger-Action Flows</h1>
-            <p className="text-xs font-semibold text-neutral-500 uppercase tracking-widest mt-1">Design automated rules linking live telephony sessions to external CRM tools</p>
+            <h1 className="text-xl font-black tracking-tighter uppercase italic text-white font-display">Trigger-Action Flows</h1>
+            <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-widest mt-1">Design automated rules linking live telephony sessions to external CRM tools</p>
           </div>
         </div>
 
@@ -68,16 +68,16 @@ const TabAutomations: React.FC = () => {
           
           {/* Left/Col 1: Flow Builder */}
           <div className="space-y-6">
-            <h3 className="text-xs font-black uppercase tracking-widest text-neutral-500 px-2 font-display">Create Flow</h3>
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-neutral-500 px-2 font-display">Create Flow</h3>
             
-            <div className="p-6 bg-[#0a0a0a] border border-white/5 rounded-[2rem] shadow-xl space-y-6">
+            <div className="p-6 bg-white/[0.015] border border-white/[0.05] backdrop-blur-2xl rounded-lg shadow-xl space-y-6">
               <div className="space-y-2">
                 <label className="text-[8px] font-black uppercase tracking-widest text-neutral-500">Flow Name</label>
                 <input 
                   type="text" 
                   value={flowName}
                   onChange={(e) => setFlowName(e.target.value)}
-                  className="w-full px-4 py-3 bg-black border border-white/10 text-white rounded-xl focus:border-white focus:ring-0 text-xs font-semibold"
+                  className="w-full px-4 py-3 bg-white/[0.02] border border-white/[0.05] text-white rounded-lg focus:border-white/20 focus:ring-0 text-xs font-semibold"
                 />
               </div>
 
@@ -86,7 +86,7 @@ const TabAutomations: React.FC = () => {
                 <select 
                   value={triggerSelect}
                   onChange={(e) => setTriggerSelect(e.target.value)}
-                  className="w-full p-3 bg-black border border-white/10 text-xs font-semibold rounded-xl text-white focus:border-white"
+                  className="w-full p-3 bg-[#0a0a0a] border border-white/[0.05] text-xs font-semibold rounded-lg text-white focus:border-white/20"
                 >
                   <option>Call Sentiment Positive</option>
                   <option>Call Completed</option>
@@ -105,7 +105,7 @@ const TabAutomations: React.FC = () => {
                 <select 
                   value={actionSelect}
                   onChange={(e) => setActionSelect(e.target.value)}
-                  className="w-full p-3 bg-black border border-white/10 text-xs font-semibold rounded-xl text-white focus:border-white"
+                  className="w-full p-3 bg-[#0a0a0a] border border-white/[0.05] text-xs font-semibold rounded-lg text-white focus:border-white/20"
                 >
                   <option>Send Slack Notification</option>
                   <option>Append to Google Sheet</option>
@@ -117,7 +117,7 @@ const TabAutomations: React.FC = () => {
 
               <button 
                 onClick={handleCreateFlow}
-                className="w-full py-3 bg-white text-black text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-neutral-100 transition-all cursor-pointer flex items-center justify-center gap-1.5 font-display"
+                className="w-full py-3 bg-white text-black text-[9px] font-black uppercase tracking-widest rounded-lg hover:bg-neutral-100 transition-all cursor-pointer flex items-center justify-center gap-1.5 font-display"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Deploy Automation</span>
@@ -127,14 +127,14 @@ const TabAutomations: React.FC = () => {
 
           {/* Right/Col 2-3: Deployed Automations */}
           <div className="lg:col-span-2 space-y-6">
-            <h3 className="text-xs font-black uppercase tracking-widest text-neutral-500 px-2 font-display">Active Workspace Automations</h3>
+            <h3 className="text-[10px] font-black uppercase tracking-widest text-neutral-500 px-2 font-display">Active Workspace Automations</h3>
             
             <div className="space-y-4">
               {flows.map((flow) => (
                 <div 
                   key={flow.id} 
-                  className={`p-6 border rounded-3xl bg-[#0a0a0a] shadow-lg transition-all flex flex-col md:flex-row justify-between items-start md:items-center gap-4 ${
-                    flow.active ? 'border-white/5' : 'border-white/5 opacity-50'
+                  className={`p-6 border rounded-lg bg-white/[0.015] backdrop-blur-2xl shadow-lg transition-all flex flex-col md:flex-row justify-between items-start md:items-center gap-4 ${
+                    flow.active ? 'border-white/[0.05]' : 'border-white/[0.03] opacity-50'
                   }`}
                 >
                   <div className="space-y-2 flex-1">
@@ -144,9 +144,9 @@ const TabAutomations: React.FC = () => {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 text-[9px] text-neutral-400 font-semibold uppercase">
-                      <span className="px-2 py-0.5 bg-black border border-white/10 rounded text-neutral-300">{flow.trigger}</span>
+                      <span className="px-2 py-0.5 bg-black/40 border border-white/[0.05] rounded text-neutral-300">{flow.trigger}</span>
                       <ArrowRight className="w-3 h-3 text-neutral-600" />
-                      <span className="px-2 py-0.5 bg-black border border-white/10 rounded text-neutral-300">{flow.action}</span>
+                      <span className="px-2 py-0.5 bg-black/40 border border-white/[0.05] rounded text-neutral-300">{flow.action}</span>
                     </div>
                   </div>
 
@@ -159,7 +159,7 @@ const TabAutomations: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <button 
                         onClick={() => toggleFlow(flow.id)}
-                        className={`text-[8px] font-black uppercase px-2.5 py-1.5 rounded-xl border transition-all cursor-pointer ${
+                        className={`text-[8px] font-black uppercase px-2.5 py-1.5 rounded-lg border transition-all cursor-pointer ${
                           flow.active 
                             ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20' 
                             : 'bg-white/5 text-neutral-500 border-white/5 hover:bg-white/10'
@@ -170,7 +170,7 @@ const TabAutomations: React.FC = () => {
 
                       <button 
                         onClick={() => deleteFlow(flow.id)}
-                        className="p-2 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 rounded-xl text-rose-400 transition-all cursor-pointer"
+                        className="p-2 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/20 rounded-lg text-rose-400 transition-all cursor-pointer"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
@@ -181,10 +181,10 @@ const TabAutomations: React.FC = () => {
             </div>
 
             {/* Ingest logs */}
-            <div className="p-6 bg-[#0a0a0a] border border-white/5 rounded-3xl space-y-4">
+            <div className="p-6 bg-white/[0.015] border border-white/[0.05] backdrop-blur-2xl rounded-lg space-y-4">
               <h4 className="text-[10px] font-black uppercase tracking-widest text-neutral-400 font-display">Real-Time Ingestion Logs</h4>
               <div className="font-mono text-[9px] text-neutral-500 space-y-2 leading-relaxed">
-                <p>[10:48:12] Webhook successfully triggered forRahul Sharma (B.Tech CS) - status 200 OK</p>
+                <p>[10:48:12] Webhook successfully triggered for Rahul Sharma (B.Tech CS) - status 200 OK</p>
                 <p>[10:45:00] Slack notification sent: Channel #leads - Aman Verma conversation summary synced</p>
                 <p>[10:30:15] Sheets record appended for Priya Das - 14 cols written</p>
               </div>

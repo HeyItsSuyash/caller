@@ -37,7 +37,7 @@ const TabAdminUsers: React.FC<TabAdminUsersProps> = ({ onImpersonate }) => {
   );
 
   return (
-    <div className="p-8 h-full bg-black overflow-y-auto text-white">
+    <div className="p-8 h-full bg-transparent overflow-y-auto text-white">
       <div className="flex items-center justify-between mb-8">
         <div>
           <h2 className="text-xl font-black tracking-tight mb-1 text-white font-display uppercase italic">System User Management</h2>
@@ -48,7 +48,7 @@ const TabAdminUsers: React.FC<TabAdminUsersProps> = ({ onImpersonate }) => {
           <input 
             type="text" 
             placeholder="Search users..." 
-            className="pl-10 pr-4 py-2 bg-[#0a0a0a] border border-white/10 text-white rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+            className="pl-10 pr-4 py-2 bg-[#0a0a0a] border border-white/[0.05] text-white rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />

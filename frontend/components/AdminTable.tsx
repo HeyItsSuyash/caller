@@ -10,9 +10,9 @@ interface AdminTableProps {
 
 const AdminTable: React.FC<AdminTableProps> = ({ title, headers, data, renderRow, loading }) => {
   return (
-    <div className="bg-[#0a0a0a] border border-white/5 rounded-xl overflow-hidden shadow-lg text-white">
-      <div className="px-6 py-4 border-b border-white/5 bg-black/50">
-        <h3 className="text-sm font-black uppercase tracking-widest text-neutral-400 font-display">{title}</h3>
+    <div className="bg-white/[0.015] border border-white/[0.05] backdrop-blur-2xl rounded-lg overflow-hidden shadow-lg text-white">
+      <div className="px-6 py-4 border-b border-white/[0.05] bg-black/40">
+        <h3 className="text-[10px] font-black uppercase tracking-widest text-neutral-400 font-display">{title}</h3>
       </div>
       
       <div className="overflow-x-auto">

@@ -34,7 +34,7 @@ const TabContacts = () => {
   const stages = ['New', 'Qualified', 'Follow Up', 'Interested', 'Converted', 'Lost'];
 
   return (
-    <div className="flex-1 flex flex-col min-w-0 bg-black p-8 overflow-y-auto scrollbar-hide text-white">
+    <div className="flex-1 flex flex-col min-w-0 bg-transparent p-6 overflow-y-auto scrollbar-hide text-white">
       <div className="max-w-6xl mx-auto w-full space-y-8 pb-16">
         
         {/* Title & View Switchers */}
@@ -46,7 +46,7 @@ const TabContacts = () => {
           
           <div className="flex items-center gap-3 w-full md:w-auto">
             {/* View Mode Selectors */}
-            <div className="flex bg-white/5 p-1 rounded-xl border border-white/5">
+            <div className="flex bg-white/5 p-1 rounded-lg border border-white/5">
               <button 
                 onClick={() => setViewMode('list')}
                 className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer ${
@@ -72,7 +72,7 @@ const TabContacts = () => {
               <input 
                 type="text" 
                 placeholder="Search leads..." 
-                className="pl-10 pr-4 py-2 bg-black border border-white/10 rounded-xl text-[10px] text-white focus:ring-1 focus:ring-white w-48 transition-all font-semibold"
+                className="pl-10 pr-4 py-2 bg-transparent border border-white/[0.05] rounded-lg text-[10px] text-white focus:ring-1 focus:ring-white w-48 transition-all font-semibold"
               />
             </div>
           </div>
@@ -81,10 +81,10 @@ const TabContacts = () => {
         {/* Dynamic Workspace Rendering */}
         {viewMode === 'list' ? (
           /* LIST VIEW */
-          <div className="bg-[#0a0a0a] border border-white/5 rounded-3xl overflow-hidden shadow-lg">
+          <div className="bg-white/[0.015] border border-white/[0.05] rounded-lg overflow-hidden shadow-lg">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-black/50 border-b border-white/5 text-[9px] font-black uppercase tracking-widest text-neutral-500">
+                <tr className="bg-white/[0.02] border-b border-white/5 text-[9px] font-black uppercase tracking-widest text-neutral-500">
                   <th className="px-6 py-4">Prospect Name</th>
                   <th className="px-6 py-4">Phone Contact</th>
                   <th className="px-6 py-4">Intent Domain</th>
@@ -107,7 +107,7 @@ const TabContacts = () => {
                     </td>
                     <td className="px-6 py-4.5 text-xs text-neutral-400 font-mono">{lead.phone}</td>
                     <td className="px-6 py-4.5">
-                      <span className="px-2 py-0.5 bg-black border border-white/10 rounded-md text-[9px] font-black text-neutral-400 uppercase tracking-tight">
+                      <span className="px-2 py-0.5 bg-black border border-white/10 rounded text-[9px] font-black text-neutral-400 uppercase tracking-tight">
                         {lead.interest}
                       </span>
                     </td>
@@ -156,7 +156,7 @@ const TabContacts = () => {
             {stages.map((stage) => {
               const stageLeads = leads.filter(l => l.stage === stage);
               return (
-                <div key={stage} className="bg-[#0a0a0a]/50 border border-white/5 rounded-3xl p-4 flex flex-col h-fit">
+                <div key={stage} className="bg-white/[0.015] border border-white/[0.05] rounded-lg p-4 flex flex-col h-fit">
                   <div className="flex justify-between items-center mb-4 px-2">
                     <span className="text-[9px] font-black uppercase tracking-[0.15em] text-neutral-500 font-display">{stage}</span>
                     <span className="text-[9px] font-black uppercase bg-white/10 text-neutral-400 px-2 py-0.5 rounded-full">
@@ -169,7 +169,7 @@ const TabContacts = () => {
                       <div 
                         key={lead.id}
                         onClick={() => setSelectedLead(lead)}
-                        className="p-4 bg-[#0a0a0a] border border-white/5 hover:border-white/20 rounded-2xl shadow-sm hover:shadow-md transition-all cursor-pointer space-y-3 group"
+                        className="p-4 bg-white/[0.02] border border-white/[0.05] hover:border-white/20 rounded-lg shadow-sm hover:shadow-md transition-all cursor-pointer space-y-3 group"
                       >
                         <div className="flex justify-between items-start">
                           <span className="text-xs font-black text-white group-hover:underline leading-none font-display">{lead.name}</span>
@@ -195,7 +195,7 @@ const TabContacts = () => {
 
         {/* Lead CRM Metrics Verification Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="p-6 border border-white/5 rounded-3xl bg-[#0a0a0a] shadow-lg space-y-2">
+          <div className="p-6 border border-white/[0.05] rounded-lg bg-white/[0.015] shadow-lg space-y-2">
             <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500 leading-none mb-1">CRM Total Contacts</p>
             <p className="text-3xl font-black tracking-tight leading-none text-white font-display">1,284</p>
             <div className="flex items-center gap-1 text-emerald-400 text-[10px] font-bold pt-1">
@@ -204,7 +204,7 @@ const TabContacts = () => {
             </div>
           </div>
 
-          <div className="p-6 border border-white/5 rounded-3xl bg-[#0a0a0a] shadow-lg space-y-2">
+          <div className="p-6 border border-white/[0.05] rounded-lg bg-white/[0.015] shadow-lg space-y-2">
             <p className="text-[9px] font-black uppercase tracking-widest text-neutral-500 leading-none mb-1">Hot Lead Conversions</p>
             <p className="text-3xl font-black tracking-tight leading-none text-white font-display">84.2%</p>
             <div className="flex items-center gap-1 text-emerald-400 text-[10px] font-bold pt-1">
@@ -213,17 +213,17 @@ const TabContacts = () => {
             </div>
           </div>
 
-          <div className="p-6 bg-[#0a0a0a] border border-white/10 rounded-3xl shadow-lg space-y-4 text-white">
+          <div className="p-6 bg-white/[0.015] border border-white/[0.05] rounded-lg shadow-lg space-y-4 text-white">
             <div className="flex justify-between items-start">
               <p className="text-[9px] font-black uppercase tracking-widest opacity-60">Ingest Pipelines</p>
               <div className="px-2 py-0.5 bg-white/10 rounded-md text-[8px] font-black uppercase tracking-widest border border-white/5">Grounded</div>
             </div>
             <div className="flex gap-2">
-              <button className="flex-1 py-2.5 bg-white/5 hover:bg-white/10 text-white border border-white/10 text-[9px] font-black uppercase tracking-widest rounded-xl transition-all cursor-pointer flex items-center justify-center gap-1.5">
+              <button className="flex-1 py-2.5 bg-white/5 hover:bg-white/10 text-white border border-white/10 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all cursor-pointer flex items-center justify-center gap-1.5">
                 <Upload className="w-3 h-3" />
                 <span>Import CSV</span>
               </button>
-              <button className="flex-1 py-2.5 bg-white text-black text-[9px] font-black uppercase tracking-widest rounded-xl hover:bg-neutral-100 transition-all cursor-pointer flex items-center justify-center gap-1.5">
+              <button className="flex-1 py-2.5 bg-white text-black text-[9px] font-black uppercase tracking-widest rounded-lg hover:bg-neutral-100 transition-all cursor-pointer flex items-center justify-center gap-1.5">
                 <Download className="w-3 h-3" />
                 <span>Export CSV</span>
               </button>
@@ -236,11 +236,11 @@ const TabContacts = () => {
       {/* Interactive Detail Modal Drawer */}
       {selectedLead && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-end p-0">
-          <div className="bg-[#0a0a0a] border-l border-white/10 h-screen w-full max-w-md shadow-2xl p-8 flex flex-col justify-between animate-in slide-in-from-right duration-300">
+          <div className="bg-[#0a0a0a]/90 backdrop-blur-2xl border-l border-white/10 h-screen w-full max-w-md shadow-2xl p-8 flex flex-col justify-between animate-in slide-in-from-right duration-300">
             <div className="space-y-6">
               <div className="flex justify-between items-start">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-xl bg-white text-black flex items-center justify-center font-black">
+                  <div className="w-10 h-10 rounded-lg bg-white text-black flex items-center justify-center font-black">
                     {selectedLead.name.substring(0, 2).toUpperCase()}
                   </div>
                   <div>
@@ -262,7 +262,7 @@ const TabContacts = () => {
                 <h4 className="text-[10px] font-black uppercase tracking-widest text-neutral-500 font-display">Interaction History</h4>
                 
                 <div className="space-y-3">
-                  <div className="p-4 bg-black border border-white/10 rounded-2xl">
+                  <div className="p-4 bg-black/40 border border-white/10 rounded-lg">
                     <p className="text-[10px] font-black text-white flex items-center gap-2 mb-1">
                       <UserCheck className="w-3.5 h-3.5 text-emerald-400" />
                       <span>Initial Inbound Query</span>
@@ -272,7 +272,7 @@ const TabContacts = () => {
                     </p>
                   </div>
                   
-                  <div className="p-4 bg-black border border-white/10 rounded-2xl">
+                  <div className="p-4 bg-black/40 border border-white/10 rounded-lg">
                     <p className="text-[10px] font-black text-white flex items-center gap-2 mb-1">
                       <BookOpen className="w-3.5 h-3.5 text-neutral-500" />
                       <span>Context Grounded (Data Room)</span>
@@ -287,12 +287,12 @@ const TabContacts = () => {
 
             <div className="space-y-3">
               <div className="flex gap-2">
-                <button className="flex-1 py-3 bg-white/5 border border-white/10 hover:border-white/20 text-white text-[10px] font-black uppercase tracking-widest rounded-xl transition-all cursor-pointer">
+                <button className="flex-1 py-3 bg-white/5 border border-white/10 hover:border-white/20 text-white text-[10px] font-black uppercase tracking-widest rounded-lg transition-all cursor-pointer">
                   Schedule Call
                 </button>
                 <button 
                   onClick={() => setSelectedLead(null)}
-                  className="flex-1 py-3 bg-white text-black text-[10px] font-black uppercase tracking-widest rounded-xl hover:bg-neutral-100 transition-all cursor-pointer"
+                  className="flex-1 py-3 bg-white text-black text-[10px] font-black uppercase tracking-widest rounded-lg hover:bg-neutral-100 transition-all cursor-pointer"
                 >
                   Close Profile
                 </button>
