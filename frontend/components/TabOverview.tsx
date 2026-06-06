@@ -291,11 +291,11 @@ const TabOverview: React.FC<TabOverviewProps> = ({ analyticsData, callStatus, tr
                     <table className="w-full text-[10.5px] text-left border-collapse">
                       <thead>
                         <tr className="border-b border-white/5 text-[8.5px] font-bold text-neutral-500 uppercase tracking-wider">
-                          <th className="pb-2">Agent</th>
-                          <th className="pb-2">Role</th>
-                          <th className="pb-2">Calls</th>
-                          <th className="pb-2">Success Rate</th>
-                          <th className="pb-2">Trend</th>
+                          <th className="pb-2 w-[35%]">Agent</th>
+                          <th className="pb-2 w-[20%]">Role</th>
+                          <th className="pb-2 w-[15%]">Calls</th>
+                          <th className="pb-2 w-[18%]">Success Rate</th>
+                          <th className="pb-2 w-[12%] font-right">Trend</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-white/5">
