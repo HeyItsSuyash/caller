@@ -40,13 +40,13 @@ router.post('/signup', async (req, res) => {
     });
 
     // 5. Generate JWT
-    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '7d' });
 
     res.status(201).json({
       message: 'User created successfully',
       token,
       user: {
-        id: user._id,
+        id: user.id,
         name: user.name,
         email: user.email,
         role: user.role,
@@ -86,13 +86,13 @@ router.post('/login', async (req, res) => {
     }
 
     // 4. Generate JWT
-    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '7d' });
+    const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '7d' });
 
     res.json({
       message: 'Logged in successfully',
       token,
       user: {
-        id: user._id,
+        id: user.id,
         name: user.name,
         email: user.email,
         role: user.role,
@@ -113,7 +113,7 @@ router.post('/login', async (req, res) => {
 router.get('/me', authenticate, (req, res) => {
   const user = req.user;
   res.json({
-    id: user._id,
+    id: user.id,
     name: user.name,
     email: user.email,
     role: user.role,

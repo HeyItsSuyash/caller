@@ -118,7 +118,7 @@ function handleStreamConnection(ws) {
         if (entityProfile) {
           console.log(`[MongoDB] Loaded profile for ${entityProfile.name}. Instructions length: ${entityProfile.instructions?.length || 0}`);
           updateCallSession(callSid, { 
-            entity_id: entityProfile._id,
+            entity_id: entityProfile.id,
             instructions: entityProfile.instructions || '' 
           });
         }

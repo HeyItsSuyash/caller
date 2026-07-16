@@ -49,9 +49,9 @@ async function verifyAuth() {
 
     // 4. Test JWT Generation and Verification
     console.log('Testing JWT flow...');
-    const token = jwt.sign({ id: user._id }, JWT_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign({ id: user.id }, JWT_SECRET, { expiresIn: '1h' });
     const decoded = jwt.verify(token, JWT_SECRET);
-    if (decoded.id.toString() === user._id.toString()) {
+    if (decoded.id.toString() === user.id.toString()) {
       console.log('✅ JWT sign/verify successful!');
     } else {
       throw new Error('JWT verification failed');

@@ -24,7 +24,7 @@ async function authenticate(req, res, next) {
     // Normalize user object: ensure id is available
     req.user = {
       ...user,
-      id: user._id.toString()
+      id: user.id
     };
     next();
   } catch (err) {
