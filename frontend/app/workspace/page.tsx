@@ -23,6 +23,7 @@ export default function WorkspacePage() {
   const [activeTab, setActiveTab] = useState('Overview');
   const [activeEntity, setActiveEntity] = useState('');
   const [callStatus, setCallStatus] = useState<'idle' | 'calling' | 'connected' | 'error'>('idle');
+  const [callSid, setCallSid] = useState<string | null>(null);
   const [transcripts, setTranscripts] = useState<any[]>([]);
   const [analyticsData, setAnalyticsData] = useState<any[]>([]);
   const [errorMsg, setErrorMsg] = useState('');
@@ -30,18 +31,23 @@ export default function WorkspacePage() {
   const [user, setUser] = useState<any>(null);
   const [targetUser, setTargetUser] = useState<any>(null);
   const [entities, setEntities] = useState<any[]>([]);
+  const [liveCalls, setLiveCalls] = useState<any[]>([]);
 
   useEffect(() => {
     const token = localStorage.getItem('token');
     const storedUser = localStorage.getItem('user');
-    
+
     if (!token) {
       router.push('/login');
       return;
     }
 
     if (storedUser) {
-      setUser(JSON.parse(storedUser));
+      try {
+        setUser(JSON.parse(storedUser));
+      } catch {
+        // corrupted user data
+      }
     }
 
     // Context-aware Entity Fetcher
@@ -66,13 +72,28 @@ export default function WorkspacePage() {
     };
     fetchEntities();
 
-    // 1. Fetch Initial Analytics
+    // Fetch live call sessions from backend
+    const fetchLiveCalls = async () => {
+      try {
+        const response = await fetch(`${BACKEND_URL}/calls`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setLiveCalls(Array.isArray(data) ? data : []);
+        }
+      } catch (err) {
+        console.error('Error fetching calls:', err);
+      }
+    };
+    fetchLiveCalls();
+
+    // Fetch Initial Analytics
     const fetchAnalytics = async () => {
       try {
         const userIdQuery = targetUser ? `?userId=${targetUser._id}` : '';
-        const endpoint = targetUser ? `/analytics` : '/analytics';
-        const response = await fetch(`${BACKEND_URL}${endpoint}${userIdQuery}`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+        const response = await fetch(`${BACKEND_URL}/analytics${userIdQuery}`, {
+          headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await response.json();
         setAnalyticsData(Array.isArray(data) ? data : [data]);
@@ -82,12 +103,12 @@ export default function WorkspacePage() {
     };
     fetchAnalytics();
 
-    // 2. Build the live WebSocket URL
+    // Build the live WebSocket URL
     const protocol = BACKEND_URL.startsWith('https') ? 'wss' : 'ws';
     const cleanUrl = BACKEND_URL.replace(/^https?:\/\//, '').replace(/\/$/, '');
     const wsUrl = `${protocol}://${cleanUrl}/live`;
     let socket: WebSocket | null = null;
-    let reconnectTimeout: NodeJS.Timeout;
+    let reconnectTimeout: ReturnType<typeof setTimeout>;
 
     const connectWS = () => {
       console.log(`[WebSocket] Connecting to: ${wsUrl}...`);
@@ -100,12 +121,23 @@ export default function WorkspacePage() {
       socket.onmessage = (event) => {
         try {
           const payload = JSON.parse(event.data);
-          if (payload.event === 'transcript') {
+
+          if (payload.event === 'call_started') {
+            // Call was answered and stream connected — now truly "connected"
+            console.log('[WebSocket] Call stream started, call is live:', payload.data?.callSid);
+            setCallStatus('connected');
+          } else if (payload.event === 'transcript') {
             setTranscripts(prev => [...prev.slice(-15), payload.data]);
           } else if (payload.event === 'call_ended') {
             console.log('[WebSocket] Call ended notification received');
             setCallStatus('idle');
+            setCallSid(null);
+            // Refresh analytics and call list after call ends
             fetchAnalytics();
+            fetchLiveCalls();
+          } else if (payload.event === 'call_updated') {
+            // Update live calls list when a call session changes
+            fetchLiveCalls();
           }
         } catch (err) {
           console.error('[WebSocket] Message processing error:', err);
@@ -113,7 +145,7 @@ export default function WorkspacePage() {
       };
 
       socket.onerror = (err) => {
-        console.error('[WebSocket] Connection error. Detailed event:', err);
+        console.error('[WebSocket] Connection error:', err);
       };
 
       socket.onclose = (event) => {
@@ -144,9 +176,10 @@ export default function WorkspacePage() {
 
   const handleCall = async (number: string) => {
     setCallStatus('calling');
+    setCallSid(null);
     setTranscripts([]);
     setErrorMsg('');
-    setActiveTab('Calls'); 
+    setActiveTab('Calls');
 
     try {
       const response = await fetch(`${BACKEND_URL}/call/outbound`, {
@@ -155,19 +188,69 @@ export default function WorkspacePage() {
           'Content-Type': 'application/json',
           'Accept': 'application/json'
         },
-        body: JSON.stringify({ 
+        body: JSON.stringify({
           to: number,
-          entity: activeEntity 
+          entity: activeEntity
         })
       });
 
       const data = await response.json();
       if (!response.ok) throw new Error(data.error || 'Server error');
-      setCallStatus('connected');
+
+      // Store the callSid for hangup/mute operations
+      if (data.callSid) {
+        setCallSid(data.callSid);
+        console.log(`[Call] Initiated. SID: ${data.callSid}. Status: 'calling' — waiting for stream to connect.`);
+      }
+      // Note: callStatus remains 'calling' here.
+      // It transitions to 'connected' when the backend emits 'call_started'
+      // via WebSocket (when Twilio stream actually begins).
     } catch (err: any) {
       setCallStatus('error');
+      setCallSid(null);
       setErrorMsg(err.message);
       console.error('Call initialization failed:', err);
+    }
+  };
+
+  const handleHangup = async () => {
+    if (!callSid) {
+      // No callSid stored — just reset state locally
+      setCallStatus('idle');
+      setCallSid(null);
+      return;
+    }
+
+    try {
+      const response = await fetch(`${BACKEND_URL}/call/${callSid}/hangup`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      const data = await response.json();
+      if (data.success) {
+        console.log(`[Hangup] Call ${callSid} terminated successfully`);
+      } else {
+        console.warn('[Hangup] Backend hangup failed, resetting state locally');
+      }
+    } catch (err) {
+      console.error('[Hangup] Request failed:', err);
+    } finally {
+      // Always reset local state — call_ended WS event will also confirm
+      setCallStatus('idle');
+      setCallSid(null);
+    }
+  };
+
+  const handleMute = async (muted: boolean) => {
+    if (!callSid) return;
+    try {
+      await fetch(`${BACKEND_URL}/call/${callSid}/mute`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ muted })
+      });
+    } catch (err) {
+      console.error('[Mute] Request failed:', err);
     }
   };
 
@@ -184,7 +267,7 @@ export default function WorkspacePage() {
             <div className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
             <span>Viewing Workspace as: {targetUser.name} ({targetUser.email})</span>
           </div>
-          <button 
+          <button
             onClick={stopImpersonating}
             className="px-3 py-1 bg-white/20 hover:bg-white/30 rounded backdrop-blur-sm transition-colors"
           >
@@ -194,38 +277,43 @@ export default function WorkspacePage() {
       )}
 
       <div className="flex flex-1 overflow-hidden">
-        <Sidebar 
-          activeTab={activeTab} 
-          setActiveTab={setActiveTab} 
+        <Sidebar
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
           entities={entities}
           activeEntity={activeEntity}
           setActiveEntity={setActiveEntity}
           onNewEntity={handleNewEntity}
           user={user}
         />
-        <MainWorkspace 
+        <MainWorkspace
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           activeEntity={activeEntity}
           transcripts={transcripts}
           callStatus={callStatus}
+          callSid={callSid}
           onCall={handleCall}
+          onHangup={handleHangup}
+          onMute={handleMute}
           analyticsData={analyticsData}
           onImpersonate={handleImpersonate}
           entities={entities}
+          user={user}
+          liveCalls={liveCalls}
         />
       </div>
 
-      <EntityModal 
-        isOpen={isModalOpen} 
-        onClose={() => setIsModalOpen(false)} 
+      <EntityModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
         onCreated={(newEntity) => {
           setEntities(prev => [...prev, newEntity]);
           setActiveEntity(newEntity.name);
           setIsModalOpen(false);
         }}
       />
-      
+
       {/* Absolute Error Notification */}
       {errorMsg && (
         <div className="fixed bottom-8 right-8 bg-rose-50 border border-rose-200 p-4 rounded-lg shadow-lg flex items-center gap-3 animate-in slide-in-from-right-8 duration-300">

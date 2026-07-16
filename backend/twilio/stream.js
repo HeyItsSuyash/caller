@@ -92,6 +92,11 @@ function handleStreamConnection(ws) {
         session = createCallSession(callSid);
       }
 
+      // Notify frontend that the call is now live (picked up by recipient)
+      if (global.broadcastEvent) {
+        global.broadcastEvent('call_started', { callSid });
+      }
+
       // FETCH MEMORY from MongoDB
       if (session.phoneNumber && session.phoneNumber !== 'unknown') {
         console.log(`[MongoDB] Fetching previous summaries for ${session.phoneNumber}...`);

@@ -33,7 +33,7 @@ app.use(cors(corsOptions));
 const { initiateOutboundCall } = require("./twilio/outbound");
 const { handleTwilioWebhook } = require("./twilio/webhook");
 const { handleStreamConnection } = require("./twilio/stream");
-const { getCallSession, getAllCalls } = require("./state/calls");
+const { getCallSession, getAllCalls, updateCallSession } = require("./state/calls");
 const { getAllAnalytics, getKnowledge, addKnowledge, deleteKnowledge } = require("./services/mongodb");
 const authRoutes = require('./routes/auth');
 const entityRoutes = require('./routes/entities');
@@ -62,6 +62,7 @@ app.get("/health", (req, res) => {
   res.status(200).send("OK");
 });
 
+// Call Initiation & Voice Webhook
 app.post("/call/outbound", initiateOutboundCall);
 app.post("/twilio/voice", handleTwilioWebhook);
 
@@ -80,6 +81,42 @@ app.get("/call/:sid/summary", (req, res) => {
   const session = getCallSession(req.params.sid);
   if (!session) return res.status(404).json({ error: "Call not found" });
   res.json({ summary: session.summary, resolution_status: session.resolution_status });
+});
+
+// Hangup endpoint: terminates an active Twilio call via Twilio REST API
+app.post("/call/:sid/hangup", async (req, res) => {
+  const { sid } = req.params;
+  try {
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    if (!accountSid || !authToken) {
+      return res.status(500).json({ error: 'Twilio credentials not configured' });
+    }
+    const twilio = require('twilio');
+    const client = twilio(accountSid, authToken);
+    await client.calls(sid).update({ status: 'completed' });
+    console.log(`[Hangup] Call ${sid} terminated by frontend request`);
+    res.json({ success: true, callSid: sid });
+  } catch (err) {
+    console.error(`[Hangup] Error terminating call ${sid}:`, err.message);
+    res.status(500).json({ error: 'Failed to terminate call', details: err.message });
+  }
+});
+
+// Mute endpoint: tracks mute state in call session
+// Note: True audio muting for direct Twilio calls requires Conference participant API.
+// For this architecture the AI stream processes audio server-side; mute state is stored
+// in session so stream.js can optionally check it before processing utterances.
+app.post("/call/:sid/mute", (req, res) => {
+  const { sid } = req.params;
+  const { muted } = req.body;
+  const session = getCallSession(sid);
+  if (!session) {
+    return res.status(404).json({ error: 'Call session not found' });
+  }
+  updateCallSession(sid, { muted: Boolean(muted) });
+  console.log(`[Mute] Call ${sid} muted=${muted}`);
+  res.json({ success: true, callSid: sid, muted: Boolean(muted) });
 });
 
 app.get("/analytics", async (req, res) => {
@@ -110,10 +147,6 @@ app.delete("/knowledge/:id", async (req, res) => {
   res.json({ success });
 });
 
-
-app.post("/call/outbound", initiateOutboundCall);
-app.post("/twilio/voice", handleTwilioWebhook);
-
 // Create HTTP server to attach both Express and WebSocket
 const server = http.createServer(app);
 const wss = new WebSocket.Server({ server });
@@ -139,31 +172,27 @@ global.broadcastEvent = broadcastEvent;
 wss.on("connection", (ws, req) => {
   // Robust path detection: remove query params and double slashes
   const rawPath = (req.url || "").split('?')[0];
-  const path = rawPath.replace(/\/+/g, '/');
-  
-  console.log(`[WebSocket] Connection request path: ${path} (raw: ${rawPath}) | Origin: ${req.headers.origin}`);
-  
-  if (path === "/twilio/stream" || path.startsWith("/twilio/stream/")) {
+  const normalizedPath = rawPath.replace(/\/+/g, '/');
+
+  console.log(`[WebSocket] Connection request path: ${normalizedPath} (raw: ${rawPath}) | Origin: ${req.headers.origin}`);
+
+  if (normalizedPath === "/twilio/stream" || normalizedPath.startsWith("/twilio/stream/")) {
     handleStreamConnection(ws);
-  } else if (path === "/live" || path === "/live/") {
+  } else if (normalizedPath === "/live" || normalizedPath === "/live/") {
     console.log("[WebSocket] Frontend dashboard connected for updates");
     frontendClients.add(ws);
     ws.on("close", () => frontendClients.delete(ws));
   } else {
-    console.log(`[WebSocket] Dropping unknown connection path: ${path}`);
+    console.log(`[WebSocket] Dropping unknown connection path: ${normalizedPath}`);
     ws.close();
   }
 });
 
-
-// Attachment moved to earlier in file for availability during connection handshake
-// global.broadcastEvent = broadcastEvent;
-
 // FINAL CATCH-ALL: Ensure any unhandled routes return JSON 404, not HTML
 app.use((req, res) => {
   console.warn(`[Routing] 404 - Not Found: ${req.method} ${req.url}`);
-  res.status(404).json({ 
-    error: "Resource not found", 
+  res.status(404).json({
+    error: "Resource not found",
     path: req.url,
     method: req.method
   });

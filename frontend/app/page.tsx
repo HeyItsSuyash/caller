@@ -108,7 +108,17 @@ export default function LandingPage() {
   const [authError, setAuthError] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
 
-  const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://127.0.0.1:3001';
+  const getBackendUrl = () => {
+    if (process.env.NEXT_PUBLIC_BACKEND_URL) return process.env.NEXT_PUBLIC_BACKEND_URL;
+    if (typeof window !== 'undefined') {
+      if (window.location.hostname.includes('caller.work')) {
+        return 'https://caller-24ie.onrender.com';
+      }
+    }
+    return 'http://127.0.0.1:3001';
+  };
+
+  const BACKEND_URL = getBackendUrl();
 
   const handleAuthSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
