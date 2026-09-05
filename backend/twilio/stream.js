@@ -78,6 +78,16 @@ function handleStreamConnection(ws) {
       safetyUnlockTimeout = null;
     }
   };
+
+  ws.on('error', (err) => {
+    console.error(`[Stream Error - ${callSid || 'unregistered'}]:`, err.message);
+  });
+
+  ws.on('close', (code, reason) => {
+    console.log(`[Stream Closed - ${callSid || 'unregistered'}]: code=${code}, reason=${reason?.toString() || 'none'}`);
+    resetAIState('WebSocket closed');
+  });
+
   ws.on('message', async (message) => {
     const msg = JSON.parse(message);
     
@@ -198,6 +208,16 @@ function handleStreamConnection(ws) {
         return;
       }
       
+      const cleanTranscript = sttResult.transcript.trim().toLowerCase().replace(/[^\w\s]/g, '');
+      const hallucinations = [
+        "thanks for watching", "thank you for watching", "please subscribe"
+      ];
+      if (hallucinations.includes(cleanTranscript) || cleanTranscript === '') {
+         console.log(`[${callSid}] Ignoring known Whisper hallucination: "${sttResult.transcript}"`);
+         resetAIState('Whisper hallucination detected on silence');
+         return;
+      }
+      
       console.log(`[${callSid}] User said: ${sttResult.transcript}`);
       addTurn(callSid, {
         timestamp: new Date().toISOString(),
@@ -259,9 +279,24 @@ function handleStreamConnection(ws) {
         // 5. Encode back to mulaw and send to Twilio
         const rawMulaw = await wavToMulawBuffer(ttsBuffer);
         
-        // Chunk and send audio to prevent websocket buffer overload
-        const chunkSize = 4000;
+        const audioDurationMs = Math.round((rawMulaw.length / 8000) * 1000);
+        console.log(`[${callSid}] Sending ${rawMulaw.length} bytes of mulaw audio (~${(audioDurationMs / 1000).toFixed(1)}s) to Twilio...`);
+
+        // Dynamically adjust safety timeout to duration of speech + 5 seconds buffer
+        if (safetyUnlockTimeout) clearTimeout(safetyUnlockTimeout);
+        safetyUnlockTimeout = setTimeout(() => {
+          resetAIState('Safety timeout reached after playback');
+        }, audioDurationMs + 5000);
+
+        // Send paced audio chunks (640 bytes = 80ms) with 25ms delay
+        // Prevents socket congestion, eliminates Twilio buffer drops, and avoids disconnects
+        const chunkSize = 640;
+        const pacingDelayMs = 25;
         for (let i = 0; i < rawMulaw.length; i += chunkSize) {
+          if (ws.readyState !== 1) {
+            console.warn(`[${callSid}] WebSocket disconnected during audio stream (state: ${ws.readyState})`);
+            break;
+          }
           const chunk = rawMulaw.slice(i, i + chunkSize);
           ws.send(JSON.stringify({
             event: 'media',
@@ -270,14 +305,20 @@ function handleStreamConnection(ws) {
               payload: chunk.toString('base64')
             }
           }));
+
+          if (i + chunkSize < rawMulaw.length) {
+            await new Promise(resolve => setTimeout(resolve, pacingDelayMs));
+          }
         }
 
-        // Send Mark to release half-duplex lock
-        ws.send(JSON.stringify({
-          event: 'mark',
-          streamSid: streamSid,
-          mark: { name: 'ai_done' }
-        }));
+        if (ws.readyState === 1) {
+          // Send Mark to release half-duplex lock when Twilio finishes playing
+          ws.send(JSON.stringify({
+            event: 'mark',
+            streamSid: streamSid,
+            mark: { name: 'ai_done' }
+          }));
+        }
       } else {
          resetAIState('TTS result empty');
       }

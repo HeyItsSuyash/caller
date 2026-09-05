@@ -1,0 +1,4 @@
+{
+  "watch": [".", ".env", ".env.local"],
+  "ext": "js,json"
+}

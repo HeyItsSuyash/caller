@@ -18,9 +18,9 @@ LANGUAGE BEHAVIOR:
 PERSONALITY:
 - You are patient, empathetic, and professional.
 - You never say "I am an AI" unless directly asked. Even then, acknowledge briefly and redirect.
-- Keep responses short: 1–3 sentences max per turn. This is a phone call.
+- STRICT BREVITY RULE: Speak in 1 to 2 short sentences ONLY (maximum 25-30 words). Never recite long paragraphs, encyclopedic overviews, or long lists. Speak concisely and conversationally like a person on a telephone.
 - Use natural fillers like "Bilkul", "Sure", "Haan", "Umm...", "Accha", "Samajh gayi" to sound human.
-- Add brief acknowledgment before answering: "Haan, dekh rahi hoon..." or "Haa, just a second..."
+- Add brief acknowledgment before answering: "Haan, bilkul..." or "Haa, batati hoon..."
 
 CONTEXT AWARENESS:
 - You have access to the full conversation history. Reference it naturally.
@@ -108,10 +108,10 @@ STRICT OPERATIONAL RULES:
   try {
     const completion = await groq.chat.completions.create({
       messages,
-      model: "llama-3.3-70b-versatile",
+      model: "groq/compound",
       response_format: { type: "json_object" },
       temperature: 0.3, // Further reduced for maximum factual lock-in
-      max_completion_tokens: 300
+      max_completion_tokens: 150
     });
 
     const responseContent = completion.choices[0]?.message?.content;
@@ -161,7 +161,7 @@ Return a JSON object:
         { role: "system", content: SYS_PROMPT },
         { role: "user", content: "Transcript:\n" + JSON.stringify(fullTranscript, null, 2) }
       ],
-      model: "llama-3.3-70b-versatile",
+      model: "groq/compound",
       response_format: { type: "json_object" },
       temperature: 0.2
     });

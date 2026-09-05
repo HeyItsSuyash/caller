@@ -39,23 +39,26 @@ const googleTTS = require('google-tts-api');
 // Generate MP3 audio buffer from Free Google TTS
 async function getGoogleTTS(text, language = 'hi') {
   try {
-    // Generate the audio URL using the free Google Translate TTS engine
-    const url = googleTTS.getAudioUrl(text, {
+    // Generate multiple audio URLs if text is long (> 200 chars)
+    const parts = googleTTS.getAllAudioUrls(text, {
       lang: language.includes('en') ? 'en-IN' : 'hi-IN',
       slow: false,
       host: 'https://translate.google.com',
+      splitPunct: ',.?'
     });
 
-    const response = await fetch(url);
-    if (!response.ok) {
-      throw new Error(`Google TTS Failed: ${response.status}`);
+    const buffers = [];
+    for (const part of parts) {
+      const response = await fetch(part.url);
+      if (!response.ok) {
+        throw new Error(`Google TTS Failed: ${response.status}`);
+      }
+      buffers.push(Buffer.from(await response.arrayBuffer()));
     }
     
-    const arrayBuffer = await response.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
-    
-    console.log(`[Google TTS] Audio received successfully. Bytes Length: ${buffer.length}`);
-    return buffer; // Returns MP3 buffer, exactly like ElevenLabs did
+    const finalBuffer = Buffer.concat(buffers);
+    console.log(`[Google TTS] Audio received successfully. Total Bytes Length: ${finalBuffer.length}`);
+    return finalBuffer; // Returns concatenated MP3 buffer
   } catch (err) {
     console.error("Google TTS Error:", err);
     return null;

@@ -203,4 +203,6 @@ server.listen(PORT, '0.0.0.0', () => {
   console.log(`Backend server fully operational on port ${PORT}`);
   console.log(`- Local access: http://localhost:${PORT}`);
   console.log(`- Network access: http://127.0.0.1:${PORT}`);
+  console.log(`- Public SERVER_URL: ${process.env.SERVER_URL || 'not set'}`);
 });
+// Active tunnel reload: faq-exemption-termination-proposed
