@@ -12,6 +12,7 @@ import TabWorkspace from './TabWorkspace';
 import TabSettings from './TabSettings';
 import TabAdminUsers from './TabAdminUsers';
 import TabAdminGeneral from './TabAdminGeneral';
+import TabAdminNumbers from './TabAdminNumbers';
 
 interface MainWorkspaceProps {
   activeTab: string;
@@ -42,7 +43,7 @@ const MainWorkspace: React.FC<MainWorkspaceProps> = ({
   entities,
   fetchEntities
 }) => {
-  const adminTabs = ['System Users', 'Global Entities', 'Global Calls', 'Global Analytics', 'Global Leads'];
+  const adminTabs = ['Numbers & Routing', 'System Users', 'Global Entities', 'Global Calls', 'Global Analytics', 'Global Leads'];
   const isAdminTab = adminTabs.includes(activeTab);
   const [isProfileOpen, setIsProfileOpen] = React.useState(false);
 
@@ -214,6 +215,7 @@ const MainWorkspace: React.FC<MainWorkspaceProps> = ({
         )}
 
         {/* Global System Admin Panels */}
+        {activeTab === 'Numbers & Routing' && <TabAdminNumbers />}
         {activeTab === 'System Users' && <TabAdminUsers onImpersonate={onImpersonate || (() => {})} />}
         {activeTab === 'Global Entities' && <TabAdminGeneral type="entities" title="Global Entity Explorer" />}
         {activeTab === 'Global Calls' && <TabAdminGeneral type="calls" title="Global Call Logs" />}

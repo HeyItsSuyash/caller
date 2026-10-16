@@ -170,6 +170,43 @@ const Sidebar: React.FC<SidebarProps> = ({
               </div>
             );
           })}
+
+          {/* Dedicated Administration Section */}
+          <div className="pt-4 mt-4 border-t border-white/5 space-y-1">
+            <div className="px-3 py-1 flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest text-neutral-500">
+              <ShieldAlert className="w-3 h-3 text-amber-400" />
+              <span>Admin Control</span>
+            </div>
+
+            <button
+              onClick={() => setActiveTab('Numbers & Routing')}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-all cursor-pointer ${
+                activeTab === 'Numbers & Routing'
+                  ? 'bg-amber-500/10 border border-amber-500/30 text-amber-300 font-bold shadow-sm'
+                  : 'text-neutral-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <PhoneCall className={`w-4 h-4 ${activeTab === 'Numbers & Routing' ? 'text-amber-400' : 'text-neutral-500'}`} />
+                <span className="text-[12px] font-semibold tracking-tight">Numbers & Routing</span>
+              </div>
+              {activeTab === 'Numbers & Routing' && <span className="text-[8px] font-black uppercase bg-amber-400 text-black px-1.5 py-0.5 rounded">Active</span>}
+            </button>
+
+            <button
+              onClick={() => setActiveTab('System Users')}
+              className={`w-full flex items-center justify-between px-3 py-2 rounded-lg transition-all cursor-pointer ${
+                activeTab === 'System Users'
+                  ? 'bg-white/[0.06] border border-white/[0.02] text-white font-bold shadow-sm'
+                  : 'text-neutral-400 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <div className="flex items-center gap-3">
+                <Users2 className={`w-4 h-4 ${activeTab === 'System Users' ? 'text-white' : 'text-neutral-500'}`} />
+                <span className="text-[12px] font-semibold tracking-tight">System Users</span>
+              </div>
+            </button>
+          </div>
         </nav>
 
         {/* AI System Status Widget placed inside the scroll area pushed to bottom */}
