@@ -23,7 +23,12 @@ async function performOutboundCall({ to, entityName }) {
   }
 
   try {
-    const client = twilio(accountSid, authToken);
+    const apiKey = process.env.TWILIO_API_KEY;
+    const apiSecret = process.env.TWILIO_API_SECRET;
+    // Authenticate via API Key & Secret with Account SID if provided, else fallback to Account SID + Auth Token
+    const client = (apiKey && apiSecret) 
+      ? twilio(apiKey, apiSecret, { accountSid }) 
+      : twilio(accountSid, authToken);
     
     const call = await client.calls.create({
       url: `${serverUrl}/twilio/voice`,

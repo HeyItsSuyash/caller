@@ -33,7 +33,10 @@ app.use(cors(corsOptions));
 const { initiateOutboundCall } = require("./twilio/outbound");
 const { handleTwilioWebhook } = require("./twilio/webhook");
 const { handleStreamConnection } = require("./twilio/stream");
+const { initiateExotelOutboundCall } = require("./exotel/outbound");
+const { handleExotelStreamConnection } = require("./exotel/stream");
 const { getCallSession, getAllCalls } = require("./state/calls");
+
 const { getAllAnalytics, getKnowledge, addKnowledge, deleteKnowledge } = require("./services/mongodb");
 const authRoutes = require('./routes/auth');
 const entityRoutes = require('./routes/entities');
@@ -58,12 +61,56 @@ app.get('/widget.js', (req, res) => {
   res.sendFile(path.join(__dirname, '../integration/widget/widget.js'));
 });
 
-app.get("/health", (req, res) => {
+app.get(["/", "/health"], (req, res) => {
   res.status(200).send("OK");
 });
 
-app.post("/call/outbound", initiateOutboundCall);
+// Telephony Status Check: Both Twilio and Exotel available simultaneously
+app.get("/api/telephony/status", (req, res) => {
+  res.json({
+    exotelConfigured: Boolean(process.env.EXOTEL_ACCOUNT_SID && process.env.EXOTEL_API_KEY),
+    twilioConfigured: Boolean(process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN),
+    exotelNumber: process.env.EXOTEL_PHONE_NUMBER || '08047281152',
+    twilioNumber: process.env.TWILIO_PHONE_NUMBER || '+16624818479'
+  });
+});
+
+// Outbound Call Initiation: auto-routes or allows specifying provider
+app.post("/call/outbound", (req, res, next) => {
+  const provider = (req.body.provider || '').toLowerCase();
+  if (provider === 'exotel' || (!process.env.TWILIO_ACCOUNT_SID && process.env.EXOTEL_ACCOUNT_SID)) {
+    return initiateExotelOutboundCall(req, res);
+  }
+  return initiateOutboundCall(req, res);
+});
+app.post("/exotel/outbound", initiateExotelOutboundCall);
+app.post("/twilio/outbound", initiateOutboundCall);
+
+// Inbound Voice Webhooks for both carriers
 app.post("/twilio/voice", handleTwilioWebhook);
+app.all("/exotel/voice", (req, res) => {
+  const serverUrl = (process.env.PUBLIC_BASE_URL || process.env.SERVER_URL || 'https://caller-24ie.onrender.com').replace(/\/$/, '');
+  const wsUrl = serverUrl.replace(/^http/, 'ws') + '/exotel/stream';
+  const callSid = req.body.CallSid || req.query.CallSid || req.body.CallUUID || `exo_${Date.now()}`;
+  const caller = req.body.From || req.query.From || req.body.CallFrom || 'Unknown';
+  
+  const exoML = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Connect>
+    <Stream url="${wsUrl}">
+      <Parameter name="callSid" value="${callSid}" />
+      <Parameter name="caller" value="${caller}" />
+      <Parameter name="provider" value="exotel" />
+    </Stream>
+  </Connect>
+</Response>`;
+  res.set('Content-Type', 'application/xml');
+  res.send(exoML);
+});
+app.all("/exotel/status", (req, res) => {
+  res.json({ success: true });
+});
+
 
 // Dashboard APIs
 app.get("/calls", (req, res) => {
@@ -111,8 +158,6 @@ app.delete("/knowledge/:id", async (req, res) => {
 });
 
 
-app.post("/call/outbound", initiateOutboundCall);
-app.post("/twilio/voice", handleTwilioWebhook);
 
 // Create HTTP server to attach both Express and WebSocket
 const server = http.createServer(app);
@@ -145,6 +190,9 @@ wss.on("connection", (ws, req) => {
   
   if (path === "/twilio/stream" || path.startsWith("/twilio/stream/")) {
     handleStreamConnection(ws);
+  } else if (path === "/exotel/stream" || path.startsWith("/exotel/stream/")) {
+    console.log("[WebSocket] Exotel media stream connected");
+    handleExotelStreamConnection(ws);
   } else if (path === "/live" || path === "/live/") {
     console.log("[WebSocket] Frontend dashboard connected for updates");
     frontendClients.add(ws);
